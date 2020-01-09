@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.0"?>
+
+<!--
+ This is my code.
+
+ $Id: plugin.xml,v 1.4 2008/04/18 04:06:01 davidms Exp $
+-->
+
+<plugin>
+
+   <extension point="org.eclipse.emf.ecore.generated_package">
+      <package
+            uri="http:///library.ecore"
+            class="org.examples.library.LibraryPackage"/>
+   </extension>
+
+</plugin>

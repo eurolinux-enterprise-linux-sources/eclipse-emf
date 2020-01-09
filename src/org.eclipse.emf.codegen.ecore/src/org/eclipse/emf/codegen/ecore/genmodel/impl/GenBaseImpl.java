@@ -1,7 +1,7 @@
 /**
  * <copyright> 
  *
- * Copyright (c) 2002-2007 IBM Corporation and others.
+ * Copyright (c) 2002-2010 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: GenBaseImpl.java,v 1.69 2009/03/13 21:09:02 davidms Exp $
+ * $Id: GenBaseImpl.java,v 1.74 2010/06/04 14:14:15 khussey Exp $
  */
 package org.eclipse.emf.codegen.ecore.genmodel.impl;
 
@@ -399,7 +399,7 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
    * implement code generation. {@link org.eclipse.emf.codegen.ecore.generator.AbstractGeneratorAdapter AbstractGeneratorAdapter} provides
    * an equivalent to this method. This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Deprecated
   protected void generate(Monitor progressMonitor, int style, List pluginVariables, String outputFilePath, JETEmitter jetEmitter)
   {
@@ -527,7 +527,7 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
    * implement code generation. {@link org.eclipse.emf.codegen.ecore.generator.AbstractGeneratorAdapter AbstractGeneratorAdapter} provides
    * an equivalent to this method. This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Deprecated
   protected void generate
     (Monitor progressMonitor, 
@@ -545,7 +545,7 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
    * implement code generation. {@link org.eclipse.emf.codegen.ecore.generator.AbstractGeneratorAdapter AbstractGeneratorAdapter} provides
    * an equivalent to this method. This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Deprecated
   protected void generate
     (Monitor progressMonitor,
@@ -590,7 +590,7 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
    * implement code generation. {@link org.eclipse.emf.codegen.ecore.generator.AbstractGeneratorAdapter AbstractGeneratorAdapter} provides
    * an equivalent to this method. This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Deprecated
   public void gen
     (Monitor progressMonitor, 
@@ -609,7 +609,7 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
    * implement code generation. {@link org.eclipse.emf.codegen.ecore.generator.AbstractGeneratorAdapter AbstractGeneratorAdapter} provides
    * an equivalent to this method. This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Deprecated
   protected void generate
     (Monitor progressMonitor, 
@@ -628,7 +628,7 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
    * implement code generation. {@link org.eclipse.emf.codegen.ecore.generator.AbstractGeneratorAdapter AbstractGeneratorAdapter} provides
    * an equivalent to this method. This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Deprecated
   protected void generate
     (Monitor progressMonitor, 
@@ -840,7 +840,7 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
    * Now, it simply returns an empty list.
    * @deprecated in 2.1.0.  Use {@link CodeGenUtil#parseName(String, char)} instead.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Deprecated
   protected final List parseName(String sourceName, char sourceSeparator)
   {
@@ -1449,7 +1449,7 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
    * 1.4.
    * @deprecated
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Deprecated
   protected static Set getJavaReservedWords()
   {
@@ -1460,7 +1460,7 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
    * @deprecated
    */
   @Deprecated
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   protected static Set getJavaLangTypes()
   {
     return CodeGenUtil.getJavaDefaultTypes();
@@ -1586,6 +1586,14 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
    */
   protected List<GenOperation> collectGenOperations(GenClass context, List<GenClass> genClasses, List<GenOperation> genOperations, GenOperationFilter filter)
   {
+    return collectGenOperations(context, genClasses, genOperations, filter, true);
+  }
+
+  /**
+   * @since 2.6
+   */
+  protected List<GenOperation> collectGenOperations(GenClass context, List<GenClass> genClasses, List<GenOperation> genOperations, GenOperationFilter filter, boolean excludeOverrides)
+  {
     List<GenOperation> result = new ArrayList<GenOperation>();
 
     if (genClasses != null)
@@ -1597,11 +1605,14 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
         {
           if (filter == null || filter.accept(genOperation))
           {
-            for (GenOperation otherGenOperation : result)
+            if (excludeOverrides)
             {
-              if (otherGenOperation.isOverrideOf(context, genOperation))
+              for (GenOperation otherGenOperation : result)
               {
-                continue LOOP;
+                if (otherGenOperation.isOverrideOf(context, genOperation))
+                {
+                  continue LOOP;
+                }
               }
             }
             result.add(genOperation);
@@ -1617,11 +1628,14 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
       {
         if (filter == null || filter.accept(genOperation))
         {
-          for (GenOperation otherGenOperation : result)
+          if (excludeOverrides)
           {
-            if (otherGenOperation.isOverrideOf(context, genOperation))
+            for (GenOperation otherGenOperation : result)
             {
-              continue LOOP;
+              if (otherGenOperation.isOverrideOf(context, genOperation))
+              {
+                continue LOOP;
+              }
             }
           }
           result.add(genOperation);
@@ -2225,7 +2239,7 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
    * @deprecated In EMF 2.2, this moved to {@link org.eclipse.emf.codegen.util.GIFEmitter GIFEmitter}.
    * This copy will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "rawtypes"})
   @Deprecated
   public static class ColorInformation
   {
@@ -2502,13 +2516,23 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
 
   protected String indent(String text, String indentation)
   {
+    return indent(text, indentation, getGenModel().getLineDelimiter());
+  }
+
+  protected String indent(String text, String indentation, String lineDelimiter)
+  {
+    return indent(text, indentation, lineDelimiter, false);
+  }
+
+  protected String indent(String text, String indentation, String lineDelimiter, boolean escape)
+  {
     if (text == null)
     {
       return null;
     }
     else
     {
-      String separator = getGenModel().getLineDelimiter() + indentation;
+      String separator = lineDelimiter + indentation;
       int increment = separator.length() - 1;
       StringBuffer stringBuffer = new StringBuffer(text);
       for (int i = 0; i < stringBuffer.length(); ++i)
@@ -2517,14 +2541,72 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
         {
           case '\n':
           {
-            stringBuffer.replace(i, i + (i + 1 < stringBuffer.length() && stringBuffer.charAt(i + 1) == '\r' ? 2 : 1), separator);
-            i += increment;
+            boolean crNext = i + 1 < stringBuffer.length() && stringBuffer.charAt(i + 1) == '\r';
+            if (escape)
+            {
+              stringBuffer.replace(i, i + (crNext ? 2 : 1), (crNext ? "\\n\\r" : "\\n") + separator);
+              i += increment + (crNext ? 4 : 2);
+            }
+            else
+            {
+              stringBuffer.replace(i, i + (crNext ? 2 : 1), separator);
+              i += increment;
+            }
             break;
           }
           case '\r':
           {
-            stringBuffer.replace(i, i + (i + 1 < stringBuffer.length() && stringBuffer.charAt(i + 1) == '\n' ? 2 : 1), separator);
-            i += increment;
+            boolean lfNext = i + 1 < stringBuffer.length() && stringBuffer.charAt(i + 1) == '\n';
+            if (escape)
+            {
+              stringBuffer.replace(i, i + (lfNext ? 2 : 1), (lfNext ? "\\r\\n" : "\\r") + separator);
+              i += increment + (lfNext ? 4 : 2);
+            }
+            else
+            {
+              stringBuffer.replace(i, i + (lfNext ? 2 : 1), separator);
+              i += increment;
+            }
+            break;
+          }
+          case '\b':
+          {
+            if (escape)
+            {
+              stringBuffer.replace(i, ++i, "\\b");
+            }
+            break;
+          }
+          case '\t':
+          {
+            if (escape)
+            {
+              stringBuffer.replace(i, ++i, "\\t");
+            }
+            break;
+          }
+          case '\f':
+          {
+            if (escape)
+            {
+              stringBuffer.replace(i, ++i, "\\f");
+            }
+            break;
+          }
+          case '\"':
+          {
+            if (escape)
+            {
+              stringBuffer.replace(i, ++i, "\\\"");
+            }
+            break;
+          }
+          case '\\':
+          {
+            if (escape)
+            {
+              stringBuffer.replace(i, ++i, "\\\\");
+            }
             break;
           }
         }
@@ -2559,7 +2641,7 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
    * implement code generation. {@link org.eclipse.emf.codegen.ecore.generator.AbstractGeneratorAdapter AbstractGeneratorAdapter} provides
    * an equivalents to the methods in this class. This class will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "rawtypes"})
   @Deprecated
   protected static class EclipseUtil
   {
@@ -2962,7 +3044,7 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
    * implement code generation. {@link org.eclipse.emf.codegen.ecore.generator.AbstractGeneratorAdapter AbstractGeneratorAdapter} provides
    * an equivalent to this method. This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Deprecated
   public boolean findOrCreateContainer
     (Monitor progressMonitor, int style, List pluginVariables, URI outputURI, boolean forceStyle)
@@ -3428,12 +3510,22 @@ public abstract class GenBaseImpl extends EObjectImpl implements GenBase
 
   protected boolean isRemappedXMLType(EClassifier eClassifier)
   {
-    if (getMainGenModel().getRuntimeVersion() == GenRuntimeVersion.EMF22)
+    if (getMainGenModel().getRuntimeVersion() == GenRuntimeVersion.EMF22 && eClassifier instanceof EDataType)
     {
-      if (eClassifier instanceof EDataType)
+      EDataType eDataType = (EDataType)eClassifier;
+      List<EDataType> members = getExtendedMetaData().getMemberTypes(eDataType);
+      if (!members.isEmpty())
       {
-        return isDerivedType((EDataType)eClassifier, XMLTypePackage.eNS_URI, null, REMAPPED_XML_TYPES);
+        for (EDataType member : members)
+        {
+          if (!isRemappedXMLType(member))
+          {
+            return false;
+          }
+        }
+        return true;
       }
+      return isDerivedType(eDataType, XMLTypePackage.eNS_URI, null, REMAPPED_XML_TYPES);
     }
     return false;
   }

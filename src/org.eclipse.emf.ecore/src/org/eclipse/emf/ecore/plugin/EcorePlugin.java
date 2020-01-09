@@ -1,7 +1,7 @@
 /**
  * <copyright>
  *
- * Copyright (c) 2002-2006 IBM Corporation and others.
+ * Copyright (c) 2002-2009 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: EcorePlugin.java,v 1.23 2008/08/02 13:40:51 emerks Exp $
+ * $Id: EcorePlugin.java,v 1.25 2009/11/16 19:27:14 khussey Exp $
  */
 package org.eclipse.emf.ecore.plugin;
 
@@ -575,6 +575,9 @@ public class EcorePlugin  extends EMFPlugin
       new ContentParserRegistryReader().readRegistry();
       new ContentHandlerRegistryReader().readRegistry();
       new URIMappingRegistryReader().readRegistry();
+      new ValidationDelegateRegistryReader().readRegistry();
+      new SettingDelegateFactoryRegistryReader().readRegistry();
+      new InvocationDelegateFactoryRegistryReader().readRegistry();
     }
   }
 
@@ -631,4 +634,7 @@ public class EcorePlugin  extends EMFPlugin
   public static final String SCHEME_PARSER_PPID = "scheme_parser";
   public static final String URI_MAPPING_PPID = "uri_mapping";
   public static final String PACKAGE_REGISTRY_IMPLEMENTATION_PPID = "package_registry_implementation";
+  public static final String VALIDATION_DELEGATE_PPID = "validation_delegate";
+  public static final String SETTING_DELEGATE_PPID = "setting_delegate";
+  public static final String INVOCATION_DELEGATE_PPID = "invocation_delegate";
 }

@@ -1,7 +1,7 @@
 /**
  * <copyright>
  *
- * Copyright (c) 2007-2008 IBM Corporation and others.
+ * Copyright (c) 2007-2010 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,10 +12,12 @@
  *
  * </copyright>
  *
- * $Id: BinaryResourceImpl.java,v 1.4 2009/02/04 16:40:23 emerks Exp $
+ * $Id: BinaryResourceImpl.java,v 1.10 2010/06/14 15:32:41 emerks Exp $
  */
 package org.eclipse.emf.ecore.resource.impl;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -51,6 +53,42 @@ import org.eclipse.emf.ecore.util.InternalEList;
  */
 public class BinaryResourceImpl extends ResourceImpl
 {
+  /**
+   * Specify the capacity of the buffered stream 
+   * used when {@link #doSave(OutputStream, Map) saving} or {@link #doLoad(InputStream, Map) loading} the resource content. 
+   * The value must be an integer.
+   * If not specified, {@link #DEFAULT_BUFFER_CAPACITY} is used. 
+   * A value less than one disables the cache. 
+   * @since 2.6
+   */
+  public static final String OPTION_BUFFER_CAPACITY = "BUFFER_CAPACITY";
+
+  /**
+   * The default {@link #OPTION_BUFFER_CAPACITY} capacity of the buffered stream
+   * used when {@link #doSave(OutputStream, Map) saving} or {@link #doLoad(InputStream, Map) loading} the resource content. 
+   * @since 2.6
+   */
+  public static final int DEFAULT_BUFFER_CAPACITY = 1024;
+
+  /**
+   * Extract the {@link #OPTION_BUFFER_CAPACITY} from the options.
+   * @param options a map of options.
+   * @return the value associated with the {@link #OPTION_BUFFER_CAPACITY} key in the options map.
+   * @since 2.6
+   */
+  protected static int getBufferCapacity(Map<?, ?> options)
+  {
+    if (options != null)
+    {
+      Integer capacity = (Integer)options.get(OPTION_BUFFER_CAPACITY);
+      if (capacity != null)
+      {
+        return capacity;
+      }
+    }
+    return DEFAULT_BUFFER_CAPACITY;
+  }
+
   public BinaryResourceImpl()
   {
     super();
@@ -64,13 +102,46 @@ public class BinaryResourceImpl extends ResourceImpl
   @Override
   protected void doSave(OutputStream outputStream, Map<?, ?> options) throws IOException
   {
-    EObjectOutputStream eObjectOutputStream = new EObjectOutputStream(outputStream, options);
-    eObjectOutputStream.saveResource(this);
+    boolean buffer = !(outputStream instanceof BufferedOutputStream);
+    if (buffer)
+    {
+      int bufferCapacity = getBufferCapacity(options);
+      if (bufferCapacity > 0)
+      {
+        outputStream = new BufferedOutputStream(outputStream, bufferCapacity);
+      }
+      else
+      {
+        buffer = false;
+      }
+    }
+
+    try
+    {
+      EObjectOutputStream eObjectOutputStream = new EObjectOutputStream(outputStream, options);
+      eObjectOutputStream.saveResource(this);
+    }
+    finally
+    {
+      if (buffer)
+      {
+        outputStream.flush();
+      }
+    }
   }
 
   @Override
   protected void doLoad(InputStream inputStream, Map<?, ?> options) throws IOException
   {
+    if (!(inputStream instanceof BufferedInputStream))
+    {
+      int bufferCapacity = getBufferCapacity(options);
+      if (bufferCapacity > 0)
+      {
+        inputStream = new BufferedInputStream(inputStream, bufferCapacity);
+      }
+    }
+
     EObjectInputStream eObjectInputStream = new EObjectInputStream(inputStream, options);
     eObjectInputStream.loadResource(this);
   }
@@ -127,7 +198,7 @@ public class BinaryResourceImpl extends ResourceImpl
       if (++internalEObjectDataArrayBufferCount >= internalEObjectDataArrayBuffer.length)
       {
         InternalEObject [][] newInternalEObjectDataArrayBuffer = new InternalEObject[internalEObjectDataArrayBufferCount * 2][];
-        System.arraycopy(internalEObjectDataArrayBuffer, 0, internalEObjectDataArrayBuffer, 0, internalEObjectDataArrayBufferCount);
+        System.arraycopy(internalEObjectDataArrayBuffer, 0, newInternalEObjectDataArrayBuffer, 0, internalEObjectDataArrayBufferCount);
         internalEObjectDataArrayBuffer = newInternalEObjectDataArrayBuffer;
       }
       internalEObjectDataArrayBuffer[internalEObjectDataArrayBufferCount] = values;
@@ -155,7 +226,7 @@ public class BinaryResourceImpl extends ResourceImpl
       if (++featureMapEntryDataArrayBufferCount >= featureMapEntryDataArrayBuffer.length)
       {
         FeatureMap.Entry.Internal [][] newFeatureMapEntryDataArrayBuffer = new FeatureMap.Entry.Internal[featureMapEntryDataArrayBufferCount * 2][];
-        System.arraycopy(featureMapEntryDataArrayBuffer, 0, featureMapEntryDataArrayBuffer, 0, featureMapEntryDataArrayBufferCount);
+        System.arraycopy(featureMapEntryDataArrayBuffer, 0, newFeatureMapEntryDataArrayBuffer, 0, featureMapEntryDataArrayBufferCount);
         featureMapEntryDataArrayBuffer = newFeatureMapEntryDataArrayBuffer;
       }
       featureMapEntryDataArrayBuffer[featureMapEntryDataArrayBufferCount] = values;
@@ -632,6 +703,7 @@ public class BinaryResourceImpl extends ResourceImpl
               {
                 writeCompressedInt(-1);
                 writeURI(internalEObject.eProxyURI());
+                return;
               }
               break;
             }
@@ -648,6 +720,7 @@ public class BinaryResourceImpl extends ResourceImpl
               {
                 writeCompressedInt(-1);
                 writeURI(internalEObject.eProxyURI());
+                return;
               }
               break;
             }
@@ -1061,7 +1134,7 @@ public class BinaryResourceImpl extends ResourceImpl
       if (++intDataArrayBufferCount >= intDataArrayBuffer.length)
       {
         int [][] newIntDataArrayBuffer = new int[intDataArrayBufferCount * 2][];
-        System.arraycopy(intDataArrayBuffer, 0, intDataArrayBuffer, 0, intDataArrayBufferCount);
+        System.arraycopy(intDataArrayBuffer, 0, newIntDataArrayBuffer, 0, intDataArrayBufferCount);
         intDataArrayBuffer = newIntDataArrayBuffer;
       }
       intDataArrayBuffer[intDataArrayBufferCount] = values;
@@ -1561,7 +1634,7 @@ public class BinaryResourceImpl extends ResourceImpl
 
     public long readLong() throws IOException
     {
-      return (long)readInt() << 32 | (long)readInt() & 0xFFFFFFFF;
+      return (long)readInt() << 32 | readInt() & 0xFFFFFFFFL;
     }
 
     public float readFloat() throws IOException
@@ -1627,7 +1700,7 @@ public class BinaryResourceImpl extends ResourceImpl
           }
           else
           {
-            characters[i] = (char)value;
+            characters[i] = (char)(value & 0xFF);
           }
         }
         return new String(characters, 0, length);

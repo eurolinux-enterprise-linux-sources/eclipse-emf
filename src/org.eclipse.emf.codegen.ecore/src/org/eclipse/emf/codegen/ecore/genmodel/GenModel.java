@@ -1,7 +1,7 @@
 /**
  * <copyright> 
  *
- * Copyright (c) 2002-2007 IBM Corporation and others.
+ * Copyright (c) 2002-2010 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: GenModel.java,v 1.64 2009/03/13 21:05:56 davidms Exp $
+ * $Id: GenModel.java,v 1.68 2010/04/28 14:50:52 emerks Exp $
  */
 package org.eclipse.emf.codegen.ecore.genmodel;
 
@@ -121,6 +121,9 @@ import org.eclipse.jdt.core.formatter.CodeFormatter;
  *   <li>{@link org.eclipse.emf.codegen.ecore.genmodel.GenModel#getUsedGenPackages <em>Used Gen Packages</em>}</li>
  *   <li>{@link org.eclipse.emf.codegen.ecore.genmodel.GenModel#getInterfaceNamePattern <em>Interface Name Pattern</em>}</li>
  *   <li>{@link org.eclipse.emf.codegen.ecore.genmodel.GenModel#getClassNamePattern <em>Class Name Pattern</em>}</li>
+ *   <li>{@link org.eclipse.emf.codegen.ecore.genmodel.GenModel#isOperationReflection <em>Operation Reflection</em>}</li>
+ *   <li>{@link org.eclipse.emf.codegen.ecore.genmodel.GenModel#isRichAjaxPlatform <em>Rich Ajax Platform</em>}</li>
+ *   <li>{@link org.eclipse.emf.codegen.ecore.genmodel.GenModel#getRuntimePlatform <em>Runtime Platform</em>}</li>
  * </ul>
  * </p>
  *
@@ -1027,7 +1030,7 @@ public interface GenModel extends GenBase
    * @return the value of the '<em>Rich Client Platform</em>' attribute.
    * @see #setRichClientPlatform(boolean)
    * @see org.eclipse.emf.codegen.ecore.genmodel.GenModelPackage#getGenModel_RichClientPlatform()
-   * @model
+   * @model transient="true" volatile="true" derived="true"
    * @generated
    */
   boolean isRichClientPlatform();
@@ -2023,6 +2026,85 @@ public interface GenModel extends GenBase
    */
   void setClassNamePattern(String value);
 
+  /**
+   * Returns the value of the '<em><b>Operation Reflection</b></em>' attribute.
+   * The default value is <code>"false"</code>.
+   * <!-- begin-user-doc -->
+   * @since 2.6
+   * <!-- end-user-doc -->
+   * @return the value of the '<em>Operation Reflection</em>' attribute.
+   * @see #setOperationReflection(boolean)
+   * @see org.eclipse.emf.codegen.ecore.genmodel.GenModelPackage#getGenModel_OperationReflection()
+   * @model default="false"
+   * @generated
+   */
+  boolean isOperationReflection();
+
+  /**
+   * Sets the value of the '{@link org.eclipse.emf.codegen.ecore.genmodel.GenModel#isOperationReflection <em>Operation Reflection</em>}' attribute.
+   * <!-- begin-user-doc -->
+   * @since 2.6
+   * <!-- end-user-doc -->
+   * @param value the new value of the '<em>Operation Reflection</em>' attribute.
+   * @see #isOperationReflection()
+   * @generated
+   */
+  void setOperationReflection(boolean value);
+
+  /**
+   * Returns the value of the '<em><b>Rich Ajax Platform</b></em>' attribute.
+   * <!-- begin-user-doc -->
+   * <p>
+   * @since 2.6
+   * </p>
+   * <!-- end-user-doc -->
+   * @return the value of the '<em>Rich Ajax Platform</em>' attribute.
+   * @see #setRichAjaxPlatform(boolean)
+   * @see org.eclipse.emf.codegen.ecore.genmodel.GenModelPackage#getGenModel_RichAjaxPlatform()
+   * @model transient="true" volatile="true" derived="true"
+   * @generated
+   */
+  boolean isRichAjaxPlatform();
+
+  /**
+   * Sets the value of the '{@link org.eclipse.emf.codegen.ecore.genmodel.GenModel#isRichAjaxPlatform <em>Rich Ajax Platform</em>}' attribute.
+   * <!-- begin-user-doc -->
+   * <!-- end-user-doc -->
+   * @param value the new value of the '<em>Rich Ajax Platform</em>' attribute.
+   * @see #isRichAjaxPlatform()
+   * @generated
+   */
+  void setRichAjaxPlatform(boolean value);
+
+  /**
+   * Returns the value of the '<em><b>Runtime Platform</b></em>' attribute.
+   * The literals are from the enumeration {@link org.eclipse.emf.codegen.ecore.genmodel.GenRuntimePlatform}.
+   * <!-- begin-user-doc -->
+   * <p>
+   * @since 2.6
+   * </p>
+   * <!-- end-user-doc -->
+   * @return the value of the '<em>Runtime Platform</em>' attribute.
+   * @see org.eclipse.emf.codegen.ecore.genmodel.GenRuntimePlatform
+   * @see #setRuntimePlatform(GenRuntimePlatform)
+   * @see org.eclipse.emf.codegen.ecore.genmodel.GenModelPackage#getGenModel_RuntimePlatform()
+   * @model
+   * @generated
+   */
+  GenRuntimePlatform getRuntimePlatform();
+
+  /**
+   * Sets the value of the '{@link org.eclipse.emf.codegen.ecore.genmodel.GenModel#getRuntimePlatform <em>Runtime Platform</em>}' attribute.
+   * <!-- begin-user-doc -->
+   * @since 2.6
+   * <!-- end-user-doc -->
+   * @param value the new value of the '<em>Runtime Platform</em>' attribute.
+   * @see org.eclipse.emf.codegen.ecore.genmodel.GenRuntimePlatform
+   * @see #getRuntimePlatform()
+   * @generated
+   */
+  void setRuntimePlatform(GenRuntimePlatform value);
+
   EList<GenPackage> getStaticGenPackages();
 
   void initialize(Collection<? extends EPackage> ePackages);
@@ -2047,6 +2129,7 @@ public interface GenModel extends GenBase
    * @since 2.3
    */
   String getLineDelimiter();
+
   /**
    * @since 2.3
    */
@@ -2488,7 +2571,7 @@ public interface GenModel extends GenBase
    * @deprecated In EMF 2.2, the {@link org.eclipse.emf.codegen.ecore.generator.Generator.Options Generator.Options} should be used to
    * record code formatter options in order to be used via the new Generator-based design. This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Deprecated
   void setCodeFormatterOptions(Map options);
 
@@ -2532,7 +2615,7 @@ public interface GenModel extends GenBase
   List<GenPackage> computeMissingUsedGenPackages();
 
   boolean isVirtualDelegation();
-  
+
   /**
    * @since 2.5
    */
@@ -2639,4 +2722,40 @@ public interface GenModel extends GenBase
    * @since 2.5
    */
   GenPackage getXMLNamespaceGenPackage();
+
+  /**
+   * Get the qualified name of the model project's GWT Module.
+   * @since 2.6
+   */
+  String getQualifiedModelModuleName();
+
+  /**
+   * Get the source dependencies for the model project's GWT Module.
+   * @since 2.6
+   */
+  List<String> getModelModuleSources();
+
+  /**
+   * Get the inherits dependencies for the model project's GWT Module.
+   * @since 2.6
+   */
+  List<String> getModelModuleInherits();
+
+  /**
+   * Get the qualified name of the edit project's GWT Module.
+   * @since 2.6
+   */
+  String getQualifiedEditModuleName();
+
+  /**
+   * Get the source dependencies for the edit project's GWT Module.
+   * @since 2.6
+   */
+  List<String> getEditModuleSources();
+
+  /**
+   * Get the inherits dependencies for the dit project's GWT Module.
+   * @since 2.6
+   */
+  List<String> getEditModuleInherits();
 }

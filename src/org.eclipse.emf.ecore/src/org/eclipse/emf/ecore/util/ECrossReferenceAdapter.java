@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: ECrossReferenceAdapter.java,v 1.24 2008/01/22 11:29:03 emerks Exp $
+ * $Id: ECrossReferenceAdapter.java,v 1.26 2009/11/26 19:06:43 davidms Exp $
  */
 package org.eclipse.emf.ecore.util;
 
@@ -445,10 +445,10 @@ public class ECrossReferenceAdapter implements Adapter.Internal
         EReference reference = (EReference)feature;
         if (reference.isContainment())
         {
-        handleContainment(notification);
-      }
+          handleContainment(notification);
+        }
         else if (isIncluded(reference))
-      {
+        {
           handleCrossReference(reference, notification);
         }
       }
@@ -610,15 +610,18 @@ public class ECrossReferenceAdapter implements Adapter.Internal
       {
         EObject notifier = (EObject)notification.getNotifier();
         EReference feature = (EReference)notification.getFeature();
-        EObject oldValue = (EObject)notification.getOldValue();
-        if (oldValue != null)
+        if (!feature.isMany() || notification.getPosition() != Notification.NO_INDEX)
         {
-          inverseCrossReferencer.remove(notifier, feature, oldValue);
-        }
-        EObject newValue = (EObject)notification.getNewValue();
-        if (newValue != null)
-        {
-          inverseCrossReferencer.add(notifier, feature, newValue);
+          EObject oldValue = (EObject)notification.getOldValue();
+          if (oldValue != null)
+          {
+            inverseCrossReferencer.remove(notifier, feature, oldValue);
+          }
+          EObject newValue = (EObject)notification.getNewValue();
+          if (newValue != null)
+          {
+            inverseCrossReferencer.add(notifier, feature, newValue);
+          }
         }
         break;
       }

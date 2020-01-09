@@ -1,7 +1,7 @@
 /**
  * <copyright> 
  *
- * Copyright (c) 2002-2007 IBM Corporation and others.
+ * Copyright (c) 2002-2010 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: GenModelItemProvider.java,v 1.44 2008/12/11 01:52:14 davidms Exp $
+ * $Id: GenModelItemProvider.java,v 1.47 2010/04/28 14:50:57 emerks Exp $
  */
 package org.eclipse.emf.codegen.ecore.genmodel.provider;
 
@@ -143,6 +143,9 @@ public class GenModelItemProvider
       addPackedEnumsPropertyDescriptor(object);
       addInterfaceNamePatternPropertyDescriptor(object);
       addClassNamePatternPropertyDescriptor(object);
+      addOperationReflectionPropertyDescriptor(object);
+      addRichAjaxPlatformPropertyDescriptor(object);
+      addRuntimePlatformPropertyDescriptor(object);
     }
     return itemPropertyDescriptors;
   }
@@ -1758,6 +1761,75 @@ public class GenModelItemProvider
   }
 
   /**
+   * This adds a property descriptor for the Operation Reflection feature.
+   * <!-- begin-user-doc -->
+   * <!-- end-user-doc -->
+   * @generated
+   */
+  protected void addOperationReflectionPropertyDescriptor(Object object)
+  {
+    itemPropertyDescriptors.add
+      (createItemPropertyDescriptor
+        (((ComposeableAdapterFactory)adapterFactory).getRootAdapterFactory(),
+         getResourceLocator(),
+         getString("_UI_GenModel_operationReflection_feature"),
+         getString("_UI_GenModel_operationReflection_description"),
+         GenModelPackage.Literals.GEN_MODEL__OPERATION_REFLECTION,
+         true,
+         false,
+         false,
+         ItemPropertyDescriptor.BOOLEAN_VALUE_IMAGE,
+         getString("_UI_ModelPropertyCategory"),
+         null));
+  }
+
+  /**
+   * This adds a property descriptor for the Rich Ajax Platform feature.
+   * <!-- begin-user-doc -->
+   * <!-- end-user-doc -->
+   * @generated
+   */
+  protected void addRichAjaxPlatformPropertyDescriptor(Object object)
+  {
+    itemPropertyDescriptors.add
+      (createItemPropertyDescriptor
+        (((ComposeableAdapterFactory)adapterFactory).getRootAdapterFactory(),
+         getResourceLocator(),
+         getString("_UI_GenModel_richAjaxPlatform_feature"),
+         getString("_UI_GenModel_richAjaxPlatform_description"),
+         GenModelPackage.Literals.GEN_MODEL__RICH_AJAX_PLATFORM,
+         true,
+         false,
+         false,
+         ItemPropertyDescriptor.BOOLEAN_VALUE_IMAGE,
+         getString("_UI_EditorPropertyCategory"),
+         null));
+  }
+
+  /**
+   * This adds a property descriptor for the Runtime Platform feature.
+   * <!-- begin-user-doc -->
+   * <!-- end-user-doc -->
+   * @generated
+   */
+  protected void addRuntimePlatformPropertyDescriptor(Object object)
+  {
+    itemPropertyDescriptors.add
+      (createItemPropertyDescriptor
+        (((ComposeableAdapterFactory)adapterFactory).getRootAdapterFactory(),
+         getResourceLocator(),
+         getString("_UI_GenModel_runtimePlatform_feature"),
+         getString("_UI_GenModel_runtimePlatform_description"),
+         GenModelPackage.Literals.GEN_MODEL__RUNTIME_PLATFORM,
+         true,
+         false,
+         false,
+         ItemPropertyDescriptor.GENERIC_VALUE_IMAGE,
+         getString("_UI_AllPropertyCategory"),
+         null));
+  }
+
+  /**
    * This specifies how to implement {@link #getChildren} and is used to deduce an appropriate feature for an
    * {@link org.eclipse.emf.edit.command.AddCommand}, {@link org.eclipse.emf.edit.command.RemoveCommand} or
    * {@link org.eclipse.emf.edit.command.MoveCommand} in {@link #createCommand}.
@@ -1897,6 +1969,9 @@ public class GenModelItemProvider
       case GenModelPackage.GEN_MODEL__PACKED_ENUMS:
       case GenModelPackage.GEN_MODEL__INTERFACE_NAME_PATTERN:
       case GenModelPackage.GEN_MODEL__CLASS_NAME_PATTERN:
+      case GenModelPackage.GEN_MODEL__OPERATION_REFLECTION:
+      case GenModelPackage.GEN_MODEL__RICH_AJAX_PLATFORM:
+      case GenModelPackage.GEN_MODEL__RUNTIME_PLATFORM:
         fireNotifyChanged(new ViewerNotification(notification, notification.getNotifier(), false, true));
         return;
       case GenModelPackage.GEN_MODEL__GEN_PACKAGES:

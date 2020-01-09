@@ -1,7 +1,7 @@
 /**
  * <copyright> 
  *
- * Copyright (c) 2002-2006 IBM Corporation and others.
+ * Copyright (c) 2002-2010 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: GenFeatureImpl.java,v 1.57 2009/04/18 11:38:01 emerks Exp $
+ * $Id: GenFeatureImpl.java,v 1.61 2010/02/22 15:30:16 khussey Exp $
  */
 package org.eclipse.emf.codegen.ecore.genmodel.impl;
 
@@ -33,6 +33,7 @@ import org.eclipse.emf.codegen.ecore.genmodel.GenModelPackage;
 import org.eclipse.emf.codegen.ecore.genmodel.GenOperation;
 import org.eclipse.emf.codegen.ecore.genmodel.GenPackage;
 import org.eclipse.emf.codegen.ecore.genmodel.GenPropertyKind;
+import org.eclipse.emf.codegen.util.CodeGenUtil;
 import org.eclipse.emf.common.notify.Notification;
 import org.eclipse.emf.common.notify.NotificationChain;
 import org.eclipse.emf.common.util.EList;
@@ -969,7 +970,7 @@ public class GenFeatureImpl extends GenTypedElementImpl implements GenFeature
 
   public String getUpperName()
   {
-    return format(getName(), '_', null, false, true).toUpperCase(getGenModel().getLocale());
+    return CodeGenUtil.upperName(getName(), getGenModel().getLocale());
   }
 
   public String getUncapName()
@@ -1171,7 +1172,8 @@ public class GenFeatureImpl extends GenTypedElementImpl implements GenFeature
 
   public String getContainerClass()
   {
-    return getGenClass().isDocumentRoot() ? "null" : getGenClass().getImportedInterfaceName() + ".class";
+    GenClass genClass = getGenClass();
+    return genClass.isDocumentRoot() || genClass.isDynamic() ? "null" : genClass.getImportedInterfaceName() + ".class";
   }
 
   public String getDerivedFlag()
@@ -1838,7 +1840,7 @@ public class GenFeatureImpl extends GenTypedElementImpl implements GenFeature
 
   public boolean isESetField()
   {
-    return !isContainer() && !isListType() && isUnsettable() && !isVolatile();
+    return !isContainer() && !isListType() && isUnsettable() && !isVolatile() && !hasSettingDelegate();
   }
 
   public boolean isGet()
@@ -1900,5 +1902,16 @@ public class GenFeatureImpl extends GenTypedElementImpl implements GenFeature
   public boolean isTested()
   {
     return isVolatile() || isDerived();
+  }
+
+  public boolean hasSettingDelegate()
+  {
+    EStructuralFeature ecoreFeature = getEcoreFeature();
+    for (String settingDelegate : EcoreUtil.getSettingDelegates(getGenPackage().getEcorePackage()))
+    {
+      if (ecoreFeature.getEAnnotation(settingDelegate) != null)
+        return true;
+    }
+    return false;
   }
 } //GenFeatureImpl

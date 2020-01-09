@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: JavaEcoreBuilder.java,v 1.55 2009/03/01 21:56:50 emerks Exp $
+ * $Id: JavaEcoreBuilder.java,v 1.57 2010/05/17 13:19:46 emerks Exp $
  */
 package org.eclipse.emf.importer.java.builder;
 
@@ -901,7 +901,7 @@ public class JavaEcoreBuilder
       {
         analyzeEnum((JEnum)abstractType);
       }
-      else
+      else if (abstractType instanceof JType)
       {
         analyzeType((JType)abstractType);
       }
@@ -2084,7 +2084,11 @@ public class JavaEcoreBuilder
       {
         if (member instanceof JField)
         {
-          value = ((JField)member).getInitializer().trim();
+          String initializer = ((JField)member).getInitializer();
+          if (initializer != null)
+          {
+            value = initializer.trim();
+          }
         }
       }
 

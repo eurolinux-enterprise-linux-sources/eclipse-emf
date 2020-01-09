@@ -13,7 +13,7 @@
  *
  * </copyright>
  *
- * $Id: XMLHandler.java,v 1.92 2009/04/18 12:09:02 emerks Exp $
+ * $Id: XMLHandler.java,v 1.94 2010/03/17 13:36:22 emerks Exp $
  */
 package org.eclipse.emf.ecore.xmi.impl;
 
@@ -1530,6 +1530,7 @@ public abstract class XMLHandler extends DefaultHandler implements XMLDefaultHan
         EObject object = objects.popEObject();
         if (mixedTargets.peek() != null && 
               (object.eContainer() != null || 
+                 suppressDocumentRoot ||
                  recordUnknownFeature && 
                    (eObjectToExtensionMap.containsValue(object) || ((InternalEObject)object).eDirectResource() != null))) 
         {
@@ -2775,6 +2776,21 @@ public abstract class XMLHandler extends DefaultHandler implements XMLDefaultHan
       {
         qName = id;
         continue;
+      }
+
+      // Ensure that references corresponding to repeating elements are always deferred and processed in order at the end.
+      //
+      if (isFirstID && extendedMetaData != null && eReference.isMany() && extendedMetaData.getFeatureKind(eReference) == ExtendedMetaData.ELEMENT_FEATURE)
+      {
+        SingleReference ref = new SingleReference
+                                   (object,
+                                    eReference,
+                                    id,
+                                    -1,
+                                    getLineNumber(),
+                                    getColumnNumber());
+        forwardSingleReferences.add(ref);
+        return;
       }
 
       if (!deferIDREFResolution)

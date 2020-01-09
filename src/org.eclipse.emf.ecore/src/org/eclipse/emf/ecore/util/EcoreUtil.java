@@ -1,7 +1,7 @@
 /**
  * <copyright>
  *
- * Copyright (c) 2002-2007 IBM Corporation and others.
+ * Copyright (c) 2002-2009 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: EcoreUtil.java,v 1.66 2009/02/20 12:44:50 emerks Exp $
+ * $Id: EcoreUtil.java,v 1.72 2010/03/13 13:47:38 emerks Exp $
  */
 package org.eclipse.emf.ecore.util;
 
@@ -354,12 +354,14 @@ public class EcoreUtil
    * @return the copy.
    * @see Copier
    */
-  public static EObject copy(EObject eObject)
+  public static <T extends EObject> T copy(T eObject)
   {
     Copier copier = new Copier();
     EObject result = copier.copy(eObject);
     copier.copyReferences();
-    return result;
+    
+    @SuppressWarnings("unchecked")T t = (T)result;
+    return t;
   }
 
   /**
@@ -1244,7 +1246,7 @@ public class EcoreUtil
       EList<EObject> contents = eObject.eContents();
       iterator = 
         (Iterator<E>)
-          (!isResolveProxies && contents instanceof InternalEList ?
+          (!isResolveProxies && contents instanceof InternalEList<?> ?
              ((InternalEList<EObject>)contents).basicIterator() :
              contents.iterator());
     }
@@ -3603,7 +3605,7 @@ public class EcoreUtil
 
   /**
    * Generates a universally unique identifier, 
-   * i.e., a <a href="ftp://ietf.org/internet-drafts/draft-mealling-uuid-urn-02.txt">UUID</a>.
+   * i.e., a <a href="http://www.ietf.org/rfc/rfc4122.txt">UUID</a>.
    * It encodes the 128 bit UUID in <a href="http://www.ietf.org/rfc/rfc2045.txt">base 64</a>,
    * but rather than padding the encoding with two "=" characters, 
    * it prefixes the encoding with a single "_" character,
@@ -3618,7 +3620,7 @@ public class EcoreUtil
 
   /**
    * Generates a universally unique identifier, 
-   * i.e., a <a href="ftp://ietf.org/internet-drafts/draft-mealling-uuid-urn-02.txt">UUID</a>.
+   * i.e., a <a href="http://tools.ietf.org/id/draft-mealling-uuid-urn-02.txt">UUID</a>.
    * The argument is filled in with the 128 bit UUID and hence must be at least 16 bytes in length.
    * @param uuid the value to receive the result.
    */
@@ -4083,6 +4085,214 @@ public class EcoreUtil
     {
       return eClassifier.getInstanceTypeName();
     }
+  }
+
+  /**
+   * @since 2.6
+   */
+  public static boolean isInvariant(EOperation eOperation)
+  {
+    return eOperation.getEType() == EcorePackage.Literals.EBOOLEAN &&
+      eOperation.getEParameters().size() == 2 &&
+      eOperation.getEParameters().get(0).getEType() == EcorePackage.Literals.EDIAGNOSTIC_CHAIN &&
+      eOperation.getEParameters().get(1).getEType() == EcorePackage.Literals.EMAP;
+  }
+
+  /**
+   * @since 2.6
+   */
+  public static List<String> getValidationDelegates(EPackage ePackage)
+  {
+    EAnnotation eAnnotation = ePackage.getEAnnotation(EcorePackage.eNS_URI);
+    if (eAnnotation != null)
+    {
+      String validationDelegates = eAnnotation.getDetails().get("validationDelegates");
+      if (validationDelegates != null)
+      {
+        List<String> result = new ArrayList<String>();
+        for (StringTokenizer stringTokenizer = new StringTokenizer(validationDelegates); stringTokenizer.hasMoreTokens();)
+        {
+          String validationDelegate = stringTokenizer.nextToken();
+          result.add(validationDelegate);
+        }
+        return result;
+      }
+    }
+    return Collections.emptyList();
+  }
+
+  /**
+   * @since 2.6
+   */
+  public static void setValidationDelegates(EPackage ePackage, List<String> validationDelegates)
+  {
+    EAnnotation eAnnotation = ePackage.getEAnnotation(EcorePackage.eNS_URI);
+    if (validationDelegates == null || validationDelegates.isEmpty())
+    {
+      if (eAnnotation != null)
+      {
+        eAnnotation.getDetails().remove("validationDelegates");
+      }
+    }
+    else
+    {
+      if (eAnnotation == null)
+      {
+        eAnnotation = EcoreFactory.eINSTANCE.createEAnnotation();
+        eAnnotation.setSource(EcorePackage.eNS_URI);
+        ePackage.getEAnnotations().add(eAnnotation);
+      }
+      StringBuffer value = new StringBuffer();
+      for (Iterator<String> i = validationDelegates.iterator(); i.hasNext();)
+      {
+        value.append(i.next());
+        if (i.hasNext())
+        {
+          value.append(' ');
+        }
+      }
+      eAnnotation.getDetails().put("validationDelegates", value.toString());
+    }
+  }
+
+  /**
+   * @since 2.6
+   */
+  public static List<String> getSettingDelegates(EPackage ePackage)
+  {
+    EAnnotation eAnnotation = ePackage.getEAnnotation(EcorePackage.eNS_URI);
+    if (eAnnotation != null)
+    {
+      String settingDelegates = eAnnotation.getDetails().get("settingDelegates");
+      if (settingDelegates != null)
+      {
+        List<String> result = new ArrayList<String>();
+        for (StringTokenizer stringTokenizer = new StringTokenizer(settingDelegates); stringTokenizer.hasMoreTokens();)
+        {
+          String settingDelegate = stringTokenizer.nextToken();
+          result.add(settingDelegate);
+        }
+        return result;
+      }
+    }
+    return Collections.emptyList();
+  }
+
+  /**
+   * @since 2.6
+   */
+  public static void setSettingDelegates(EPackage ePackage, List<String> settingDelegates)
+  {
+    EAnnotation eAnnotation = ePackage.getEAnnotation(EcorePackage.eNS_URI);
+    if (settingDelegates == null || settingDelegates.isEmpty())
+    {
+      if (eAnnotation != null)
+      {
+        eAnnotation.getDetails().remove("settingDelegates");
+      }
+    }
+    else
+    {
+      if (eAnnotation == null)
+      {
+        eAnnotation = EcoreFactory.eINSTANCE.createEAnnotation();
+        eAnnotation.setSource(EcorePackage.eNS_URI);
+        ePackage.getEAnnotations().add(eAnnotation);
+      }
+      StringBuffer value = new StringBuffer();
+      for (Iterator<String> i = settingDelegates.iterator(); i.hasNext();)
+      {
+        value.append(i.next());
+        if (i.hasNext())
+        {
+          value.append(' ');
+        }
+      }
+      eAnnotation.getDetails().put("settingDelegates", value.toString());
+    }
+  }
+
+  /**
+   * @since 2.6
+   */
+  public static EStructuralFeature.Internal.SettingDelegate.Factory getSettingDelegateFactory(EStructuralFeature eStructuralFeature)
+  {
+    for (String settingDelegate : getSettingDelegates(eStructuralFeature.getEContainingClass().getEPackage()))
+    {
+      if (eStructuralFeature.getEAnnotation(settingDelegate) != null)
+        return EStructuralFeature.Internal.SettingDelegate.Factory.Registry.INSTANCE.getFactory(settingDelegate);
+    }
+    return null;
+  }
+
+  /**
+   * @since 2.6
+   */
+  public static List<String> getInvocationDelegates(EPackage ePackage)
+  {
+    EAnnotation eAnnotation = ePackage.getEAnnotation(EcorePackage.eNS_URI);
+    if (eAnnotation != null)
+    {
+      String invocationDelegates = eAnnotation.getDetails().get("invocationDelegates");
+      if (invocationDelegates != null)
+      {
+        List<String> result = new ArrayList<String>();
+        for (StringTokenizer stringTokenizer = new StringTokenizer(invocationDelegates); stringTokenizer.hasMoreTokens();)
+        {
+          String invocationDelegate = stringTokenizer.nextToken();
+          result.add(invocationDelegate);
+        }
+        return result;
+      }
+    }
+    return Collections.emptyList();
+  }
+
+  /**
+   * @since 2.6
+   */
+  public static void setInvocationDelegates(EPackage ePackage, List<String> invocationDelegates)
+  {
+    EAnnotation eAnnotation = ePackage.getEAnnotation(EcorePackage.eNS_URI);
+    if (invocationDelegates == null || invocationDelegates.isEmpty())
+    {
+      if (eAnnotation != null)
+      {
+        eAnnotation.getDetails().remove("invocationDelegates");
+      }
+    }
+    else
+    {
+      if (eAnnotation == null)
+      {
+        eAnnotation = EcoreFactory.eINSTANCE.createEAnnotation();
+        eAnnotation.setSource(EcorePackage.eNS_URI);
+        ePackage.getEAnnotations().add(eAnnotation);
+      }
+      StringBuffer value = new StringBuffer();
+      for (Iterator<String> i = invocationDelegates.iterator(); i.hasNext();)
+      {
+        value.append(i.next());
+        if (i.hasNext())
+        {
+          value.append(' ');
+        }
+      }
+      eAnnotation.getDetails().put("invocationDelegates", value.toString());
+    }
+  }
+
+  /**
+   * @since 2.6
+   */
+  public static EOperation.Internal.InvocationDelegate.Factory getInvocationDelegateFactory(EOperation eOperation)
+  {
+    for (String invocationDelegate : getInvocationDelegates(eOperation.getEContainingClass().getEPackage()))
+    {
+      if (eOperation.getEAnnotation(invocationDelegate) != null)
+        return EOperation.Internal.InvocationDelegate.Factory.Registry.INSTANCE.getFactory(invocationDelegate);
+    }
+    return null;
   }
 
   /*

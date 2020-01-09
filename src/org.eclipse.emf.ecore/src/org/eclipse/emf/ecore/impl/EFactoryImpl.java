@@ -1,7 +1,7 @@
 /**
  * <copyright>
  *
- * Copyright (c) 2002-2006 IBM Corporation and others.
+ * Copyright (c) 2002-2009 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: EFactoryImpl.java,v 1.27 2008/12/22 14:24:54 emerks Exp $
+ * $Id: EFactoryImpl.java,v 1.29 2009/11/16 19:27:13 khussey Exp $
  */
 package org.eclipse.emf.ecore.impl;
 
@@ -38,6 +38,7 @@ import java.util.StringTokenizer;
 
 import org.eclipse.emf.common.notify.Notification;
 import org.eclipse.emf.common.notify.NotificationChain;
+import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EAnnotation;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EDataType;
@@ -223,6 +224,28 @@ public class EFactoryImpl extends EModelElementImpl implements EFactory
         return ePackage != null;
     }
     return eDynamicIsSet(featureID);
+  }
+
+  /**
+   * <!-- begin-user-doc -->
+   * <!-- end-user-doc -->
+   * @generated
+   */
+  @Override
+  public Object eInvoke(int operationID, EList<?> arguments) throws InvocationTargetException
+  {
+    switch (operationID)
+    {
+      case EcorePackage.EFACTORY___GET_EANNOTATION__STRING:
+        return getEAnnotation((String)arguments.get(0));
+      case EcorePackage.EFACTORY___CREATE__ECLASS:
+        return create((EClass)arguments.get(0));
+      case EcorePackage.EFACTORY___CREATE_FROM_STRING__EDATATYPE_STRING:
+        return createFromString((EDataType)arguments.get(0), (String)arguments.get(1));
+      case EcorePackage.EFACTORY___CONVERT_TO_STRING__EDATATYPE_OBJECT:
+        return convertToString((EDataType)arguments.get(0), arguments.get(1));
+    }
+    return eDynamicInvoke(operationID, arguments);
   }
 
   /**
@@ -609,20 +632,27 @@ public class EFactoryImpl extends EModelElementImpl implements EFactory
 
   protected Object createFromString(String hexString)
   {
-    byte [] byteValue = hexStringToBytes(hexString);
-    ByteArrayInputStream bytes = new ByteArrayInputStream(byteValue);
-    try
+    if (hexString == null)
     {
-      ObjectInputStream in = new ObjectInputStream(bytes);
-      return in.readObject();
+      return null;
     }
-    catch (IOException exception)
+    else
     {
-      throw new RuntimeException(exception);
-    }
-    catch (ClassNotFoundException exception)
-    {
-      throw new RuntimeException(exception);
+      byte [] byteValue = hexStringToBytes(hexString);
+      ByteArrayInputStream bytes = new ByteArrayInputStream(byteValue);
+      try
+      {
+        ObjectInputStream in = new ObjectInputStream(bytes);
+        return in.readObject();
+      }
+      catch (IOException exception)
+      {
+        throw new RuntimeException(exception);
+      }
+      catch (ClassNotFoundException exception)
+      {
+        throw new RuntimeException(exception);
+      }
     }
   }
 

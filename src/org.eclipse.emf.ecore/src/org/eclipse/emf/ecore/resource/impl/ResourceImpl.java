@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: ResourceImpl.java,v 1.33 2009/02/19 19:28:12 emerks Exp $
+ * $Id: ResourceImpl.java,v 1.35 2010/03/16 14:41:10 emerks Exp $
  */
 package org.eclipse.emf.ecore.resource.impl;
 
@@ -1473,8 +1473,8 @@ public class ResourceImpl extends NotifierImpl implements Resource, Resource.Int
 
       try
       {
-        inputStream = getUnderlyingInputStream(inputStream, options);
         options = mergeMaps(options, defaultLoadOptions);
+        inputStream = getUnderlyingInputStream(inputStream, options);
         URIConverter.Cipher cipher = options != null ?
           (URIConverter.Cipher)options.get(Resource.OPTION_CIPHER) :
           null;
@@ -1556,7 +1556,12 @@ public class ResourceImpl extends NotifierImpl implements Resource, Resource.Int
    */
   protected void unloaded(InternalEObject internalEObject)
   {
-    internalEObject.eSetProxyURI(uri.appendFragment(getURIFragment(internalEObject)));
+    // Ensure that an unresolved containment proxy's URI isn't reset.
+    //
+    if (!internalEObject.eIsProxy())
+    {
+      internalEObject.eSetProxyURI(uri.appendFragment(getURIFragment(internalEObject)));
+    }
     internalEObject.eAdapters().clear();
   }
 

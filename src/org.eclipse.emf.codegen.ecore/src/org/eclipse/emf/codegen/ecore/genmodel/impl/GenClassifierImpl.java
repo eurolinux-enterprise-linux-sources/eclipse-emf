@@ -1,7 +1,7 @@
 /**
  * <copyright> 
  *
- * Copyright (c) 2002-2006 IBM Corporation and others.
+ * Copyright (c) 2002-2010 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: GenClassifierImpl.java,v 1.14 2008/03/10 19:10:25 emerks Exp $
+ * $Id: GenClassifierImpl.java,v 1.17 2010/06/04 14:14:15 khussey Exp $
  */
 package org.eclipse.emf.codegen.ecore.genmodel.impl;
 
@@ -24,6 +24,7 @@ import org.eclipse.emf.codegen.ecore.genmodel.GenClassifier;
 import org.eclipse.emf.codegen.ecore.genmodel.GenJDKLevel;
 import org.eclipse.emf.codegen.ecore.genmodel.GenModelPackage;
 import org.eclipse.emf.codegen.ecore.genmodel.GenPackage;
+import org.eclipse.emf.codegen.ecore.genmodel.GenRuntimeVersion;
 import org.eclipse.emf.codegen.ecore.genmodel.GenTypeParameter;
 import org.eclipse.emf.common.notify.NotificationChain;
 import org.eclipse.emf.common.util.EList;
@@ -302,5 +303,41 @@ public abstract class GenClassifierImpl extends GenBaseImpl implements GenClassi
   public String getImportedBoundedWildcardInstanceClassName()
   {
     return getImportedInstanceClassName();
+  }
+
+  protected String getConstraintExpression(String constraint)
+  {
+    for (String validationDelegate : EcoreUtil.getValidationDelegates(getGenPackage().getEcorePackage()))
+    {
+      String expression = EcoreUtil.getAnnotation(getEcoreClassifier(), validationDelegate, constraint);
+      if (expression != null)
+      {
+        return expression;
+      }
+    }
+    return null;
+  }
+
+  public boolean hasConstraintExpression(String constraint)
+  {
+    return getGenModel().getRuntimeVersion().getValue() >= GenRuntimeVersion.EMF26_VALUE && getConstraintExpression(constraint) != null;
+  }
+
+  public String getConstraintExpression(String constraint, String indentation)
+  {
+    return indent(getConstraintExpression(constraint), indentation + "\"", "\" +" + getGenModel().getNonNLS() + getGenModel().getLineDelimiter(), true);
+  }
+
+  public String getValidationDelegate(String constraint)
+  {
+    for (String validationDelegate : EcoreUtil.getValidationDelegates(getGenPackage().getEcorePackage()))
+    {
+      String expression = EcoreUtil.getAnnotation(getEcoreClassifier(), validationDelegate, constraint);
+      if (expression != null)
+      {
+        return validationDelegate;
+      }
+    }
+    return null;
   }
 }

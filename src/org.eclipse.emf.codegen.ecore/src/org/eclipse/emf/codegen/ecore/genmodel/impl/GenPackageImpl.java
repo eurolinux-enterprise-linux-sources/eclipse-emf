@@ -1,7 +1,7 @@
 /**
  * <copyright> 
  *
- * Copyright (c) 2002-2007 IBM Corporation and others.
+ * Copyright (c) 2002-2009 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: GenPackageImpl.java,v 1.92 2009/04/18 12:07:12 emerks Exp $
+ * $Id: GenPackageImpl.java,v 1.95 2010/02/04 20:56:54 emerks Exp $
  */
 package org.eclipse.emf.codegen.ecore.genmodel.impl;
 
@@ -2102,6 +2102,25 @@ public class GenPackageImpl extends GenBaseImpl implements GenPackage
     return false;
   }
 
+  public boolean hasInvariantExpressions()
+  {
+    if (getGenModel().getRuntimeVersion().getValue() >= GenRuntimeVersion.EMF26_VALUE)
+    {
+      for (GenClass genClass : getGenClasses())
+      {
+        for (GenOperation genOperation : genClass.getGenOperations())
+        {
+          if (genOperation.isInvariant() && genOperation.hasInvariantExpression())
+          {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  
   public String getValidatorClassName()
   {
     return getPrefixedName("Validator");
@@ -2873,7 +2892,7 @@ public class GenPackageImpl extends GenBaseImpl implements GenPackage
    * @deprecated In EMF 2.2, a {@link org.eclipse.emf.codegen.ecore.generator.Generator Generator} should be used to generate code.
    * This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Override
   @Deprecated
   public void generate(Monitor progressMonitor)
@@ -3125,7 +3144,7 @@ public class GenPackageImpl extends GenBaseImpl implements GenPackage
    * @deprecated In EMF 2.2, schema generation is properly done via a model exporter. This method will be removed after 2.2.
    */
   @Override
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Deprecated
   public void generateSchema(Monitor progressMonitor)
   {
@@ -3158,7 +3177,7 @@ public class GenPackageImpl extends GenBaseImpl implements GenPackage
   /**
    * @deprecated In EMF 2.2, schema generation is properly done via a model exporter. This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Deprecated
   protected void generateXSD(String type)
   {
@@ -3302,7 +3321,7 @@ public class GenPackageImpl extends GenBaseImpl implements GenPackage
    * @deprecated In EMF 2.2, a {@link org.eclipse.emf.codegen.ecore.generator.Generator Generator} should be used to generate code.
    * This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "rawtypes"})
   @Deprecated
   public void generatePackageSerialization(Monitor progressMonitor)
   {
@@ -3662,7 +3681,7 @@ public class GenPackageImpl extends GenBaseImpl implements GenPackage
    * @deprecated In EMF 2.2, a {@link org.eclipse.emf.codegen.ecore.generator.Generator Generator} should be used to generate code.
    * This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Deprecated
   @Override
   public void generateEdit(Monitor progressMonitor)
@@ -3718,7 +3737,7 @@ public class GenPackageImpl extends GenBaseImpl implements GenPackage
    * @deprecated In EMF 2.2, a {@link org.eclipse.emf.codegen.ecore.generator.Generator Generator} should be used to generate code.
    * This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Override
   @Deprecated
   public void generateEditor(Monitor progressMonitor)
@@ -3828,7 +3847,7 @@ public class GenPackageImpl extends GenBaseImpl implements GenPackage
    * @deprecated In EMF 2.2, a {@link org.eclipse.emf.codegen.ecore.generator.Generator Generator} should be used to generate code.
    * This method will be removed after 2.2.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   @Override
   @Deprecated
   public void generateTests(Monitor progressMonitor)
@@ -4195,14 +4214,18 @@ public class GenPackageImpl extends GenBaseImpl implements GenPackage
           @Override
           public String caseEOperation(EOperation eOperation)
           {
-            EClass eClass = eOperation.getEContainingClass();
-            return 
-              (useGenerics ?  "" : "(" + getGenModel().getImportedName("org.eclipse.emf.ecore.EOperation") +  ")") + 
-                caseEClassifier(eClass) + 
-                ".getEOperations().get(" +
-                eClass.getEOperations().indexOf(eOperation) +
-                ")";
-          }
+            if (getGenModel().isOperationReflection())
+            {
+              return "get" + findGenOperation(eOperation).getOperationAccessorName() + "()";
+            }
+            else
+            {
+              EClass eClass = eOperation.getEContainingClass();
+              return (useGenerics ? "" : "(" + getGenModel().getImportedName("org.eclipse.emf.ecore.EOperation") + ")")
+                + caseEClassifier(eClass) + ".getEOperations().get(" + eClass.getEOperations().indexOf(eOperation) + ")";
+            }
+        }
+
           @Override
           public String caseEEnumLiteral(EEnumLiteral eEnumLiteral)
           {

@@ -6,8 +6,8 @@
 %global eclipse_dropin   %{_datadir}/eclipse/dropins
 
 Name:      eclipse-emf
-Version:   2.5.0
-Release:   4.4%{?dist}
+Version:   2.6.0
+Release:   1%{?dist}
 Summary:   Eclipse Modeling Framework (EMF) Eclipse plugin
 Group:     System Environment/Libraries
 License:   EPL
@@ -23,16 +23,14 @@ Source1:   get-emf.sh
 Patch0:    %{name}-make-homeless.patch
 # look inside correct directory for platform docs
 Patch1:    %{name}-platform-docs-location.patch
-# look inside all symlink'd plugin directories when building javadocs
-# this patch has been sent upstream, see eclipse.org bug #281779
-Patch2:    %{name}-symlinked-classpath.patch
-# don't include hidden files in source plugins
-# (mostly to shut rpmlint up, but these files aren't needed for source plugin builds; they
-# are still included such that the example installer can create full sample projects in 
-# your workspace)
-Patch3:    %{name}-build-props.patch
+# Remove rap components, they have added dependencies
+Patch2:    %{name}-norap.patch
+# Build docs correctly
+Patch3:	   %{name}-build-docs.patch
 # bundle examples in example-installer plugins from source in tarball instead of from cvs
 Patch4:    %{name}-bundle-examples.patch
+# Remove xsd2ecore components from SDK, they are not in the main feature
+Patch5:    %{name}-no-xsd2ecore.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -118,6 +116,7 @@ plugins.
 %patch2 -p0
 %patch3 -p1
 %patch4 -p1
+%patch5 -p1
 
 rm org.eclipse.emf.doc/tutorials/jet2/jetc-task.jar
 rm org.eclipse.emf.test.core/data/data.jar
@@ -213,6 +212,10 @@ rm -rf %{buildroot}
 %doc org.eclipse.emf.examples-feature/rootfiles/*
 
 %changelog
+* Thu Jan 06 2011 Jeff Johnston <jjohnstn@redhat.com> 2.6.0-1
+- Resolves: #656344
+- Rebase to 2.6.0 (Helios SR1)
+
 * Fri Feb 12 2010 Andrew Overholt <overholt@redhat.com> 2.5.0-4.4
 - Don't build debuginfo if building arch-specific packages.
 

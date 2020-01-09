@@ -1,7 +1,7 @@
 /**
  * <copyright> 
  *
- * Copyright (c) 2005-2006 IBM Corporation and others.
+ * Copyright (c) 2005-2009 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: DeleteCommand.java,v 1.8 2009/02/02 12:42:39 emerks Exp $
+ * $Id: DeleteCommand.java,v 1.10 2009/12/30 17:08:31 emerks Exp $
  */
 package org.eclipse.emf.edit.command;
 
@@ -29,14 +29,17 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer;
 import org.eclipse.emf.edit.EMFEditPlugin;
 import org.eclipse.emf.edit.domain.AdapterFactoryEditingDomain;
 import org.eclipse.emf.edit.domain.EditingDomain;
 
 
 /**
- * This uses one or more {@link RemoveCommand}s to remove an object from its parent container and to delete all other
- * references to it from within the editing domain.
+ * This {@link RemoveCommand removes} an object from its parent and, 
+ * if that leaves the object orphaned from any resource,
+ * i.e. in the usual case where its parent was its container, 
+ * additionally deletes all other references to it from within the editing domain.
  * @since 2.2
  */
 public class DeleteCommand extends CompoundCommand
@@ -78,7 +81,7 @@ public class DeleteCommand extends CompoundCommand
   }
 
   /**
-   * This is the editing doman in which this command operates.
+   * This is the editing domain in which this command operates.
    */
   protected EditingDomain domain;
 
@@ -131,33 +134,47 @@ public class DeleteCommand extends CompoundCommand
       }
     }
     
-    Map<EObject, Collection<EStructuralFeature.Setting>> usages = EcoreUtil.UsageCrossReferencer.findAll(eObjects, domain.getResourceSet());
+    Map<EObject, Collection<EStructuralFeature.Setting>> usages = findReferences(eObjects);
     
     super.execute();
 
     for (Map.Entry<EObject, Collection<EStructuralFeature.Setting>> entry : usages.entrySet())
     {
       EObject eObject = entry.getKey();
-      Collection<EStructuralFeature.Setting> settings = entry.getValue();
-      for (EStructuralFeature.Setting setting : settings)
+      if (eObject.eResource() == null)
       {
-        EObject referencingEObject = setting.getEObject();
-        if (!eObjects.contains(referencingEObject))
+        Collection<EStructuralFeature.Setting> settings = entry.getValue();
+        for (EStructuralFeature.Setting setting : settings)
         {
-          EStructuralFeature eStructuralFeature = setting.getEStructuralFeature();
-          if (eStructuralFeature.isChangeable())
+          EObject referencingEObject = setting.getEObject();
+          if (!eObjects.contains(referencingEObject))
           {
-            if (eStructuralFeature.isMany())
+            EStructuralFeature eStructuralFeature = setting.getEStructuralFeature();
+            if (eStructuralFeature.isChangeable())
             {
-              appendAndExecute(RemoveCommand.create(domain, referencingEObject, eStructuralFeature, eObject));
-            }
-            else
-            {
-              appendAndExecute(SetCommand.create(domain, referencingEObject, eStructuralFeature, SetCommand.UNSET_VALUE));
+              if (eStructuralFeature.isMany())
+              {
+                appendAndExecute(RemoveCommand.create(domain, referencingEObject, eStructuralFeature, eObject));
+              }
+              else
+              {
+                appendAndExecute(SetCommand.create(domain, referencingEObject, eStructuralFeature, SetCommand.UNSET_VALUE));
+              }
             }
           }
         }
       }
     }
+  }
+
+  /**
+   * Returns the references to the objects in the given collection that are to be cleared.
+   * The default implementation uses {@link UsageCrossReferencer} to find all incoming cross references.
+   * @see UsageCrossReferencer
+   * @since 2.6
+   */
+  protected Map<EObject, Collection<EStructuralFeature.Setting>> findReferences(Collection<EObject> eObjects)
+  {
+    return EcoreUtil.UsageCrossReferencer.findAll(eObjects, domain.getResourceSet());
   }
 }

@@ -1,7 +1,7 @@
 /**
  * <copyright>
  *
- * Copyright (c) 2004-2007 IBM Corporation and others.
+ * Copyright (c) 2004-2009 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,13 +12,14 @@
  *
  * </copyright>
  *
- * $Id: EObjectValidator.java,v 1.30 2009/02/20 12:44:50 emerks Exp $
+ * $Id: EObjectValidator.java,v 1.36 2010/03/01 17:48:37 emerks Exp $
  */
 package org.eclipse.emf.ecore.util;
 
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -35,16 +36,16 @@ import org.eclipse.emf.common.util.DiagnosticChain;
 import org.eclipse.emf.common.util.EMap;
 import org.eclipse.emf.common.util.ResourceLocator;
 
-import org.eclipse.emf.ecore.EValidator;
-
 import org.eclipse.emf.ecore.EAttribute;
-import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EClass;
-import org.eclipse.emf.ecore.EReference;
-import org.eclipse.emf.ecore.EcorePackage;
 import org.eclipse.emf.ecore.EDataType;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EOperation;
 import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.emf.ecore.EValidator;
+import org.eclipse.emf.ecore.EcorePackage;
 import org.eclipse.emf.ecore.InternalEObject;
 
 import org.eclipse.emf.ecore.plugin.EcorePlugin;
@@ -52,6 +53,7 @@ import org.eclipse.emf.ecore.plugin.EcorePlugin;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 
+import org.eclipse.emf.ecore.xml.type.XMLTypePackage;
 import org.eclipse.emf.ecore.xml.type.util.XMLTypeUtil;
 
 
@@ -79,6 +81,7 @@ public class EObjectValidator implements EValidator
   public static final int EOBJECT__EVERY_KEY_UNIQUE = 13;
   public static final int EOBJECT__EVERY_MAP_ENTRY_UNIQUE = 14;
   public static final int EOBJECT__NO_CIRCULAR_CONTAINMENT = 15;
+  public static final int EOBJECT__EVERY_BIDIRECTIONAL_REFERENCE_IS_PAIRED = 16;
   
   static final int EOBJECT_DIAGNOSTIC_CODE_COUNT = EOBJECT__NO_CIRCULAR_CONTAINMENT;
   
@@ -166,6 +169,122 @@ public class EObjectValidator implements EValidator
   }
 
   /**
+   * @since 2.6
+   */
+  protected static EValidator.ValidationDelegate.Registry getValidationDelegateRegistry(Map<Object, Object> context)
+  {
+    if (context != null)
+    {
+      EValidator.ValidationDelegate.Registry result = (EValidator.ValidationDelegate.Registry)context.get(EValidator.ValidationDelegate.Registry.class);
+      if (result != null)
+      {
+        return result;
+      }
+    }
+
+    return EValidator.ValidationDelegate.Registry.INSTANCE;
+  }
+
+  /**
+   * Delegates evaluation of the given invariant expression against the object in the given context.
+   * @return the result of the expression evaluation.
+   * @since 2.6
+   */
+  public static boolean validate(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context, String validationDelegate, EOperation invariant, String expression, int severity, String source, int code)
+  {
+    ValidationDelegate delegate = getValidationDelegateRegistry(context).getValidationDelegate(validationDelegate);
+    if (delegate != null)
+    {
+      try
+      {
+        if (!delegate.validate(eClass, eObject, context, invariant, expression))
+        {
+          if (diagnostics != null)
+            reportInvariantDelegateViolation(eClass, eObject, diagnostics, context, invariant, severity, source, code);
+          return false;
+        }
+      }
+      catch (Throwable throwable)
+      {
+        if (diagnostics != null)
+          reportInvariantDelegateException(eClass, eObject, diagnostics, context, invariant, severity, source, code, throwable);
+      }
+    }
+    else
+    {
+      if (diagnostics != null)
+        reportInvariantDelegateNotFound(eClass, eObject, diagnostics, context, invariant, severity, source, code, validationDelegate);
+    }
+    return true;
+  }
+
+  /**
+   * Delegates evaluation of the given constraint expression against the object in the given context.
+   * @return the result of the expression evaluation.
+   * @since 2.6
+   */
+  public boolean validate(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context, String validationDelegate, String constraint, String expression, int severity, String source, int code)
+  {
+    ValidationDelegate delegate = getValidationDelegateRegistry(context).getValidationDelegate(validationDelegate);
+    if (delegate != null)
+    {
+      try
+      {
+        if (!delegate.validate(eClass, eObject, context, constraint, expression))
+        {
+          if (diagnostics != null)
+            reportConstraintDelegateViolation(eClass, eObject, diagnostics, context, constraint, severity, source, code);
+          return false;
+        }
+      }
+      catch (Throwable throwable)
+      {
+        if (diagnostics != null)
+          reportConstraintDelegateException(eClass, eObject, diagnostics, context, constraint, severity, source, code, throwable);
+      }
+    }
+    else
+    {
+      if (diagnostics != null)
+        reportConstraintDelegateNotFound(eClass, eObject, diagnostics, context, constraint, severity, source, code, validationDelegate);
+    }
+    return true;
+  }
+
+  /**
+   * Delegates evaluation of the given constraint expression against the value in the given context.
+   * @return the result of the expression evaluation.
+   * @since 2.6
+   */
+  public boolean validate(EDataType eDataType, Object value, DiagnosticChain diagnostics, Map<Object, Object> context, String validationDelegate, String constraint, String expression, int severity, String source, int code)
+  {
+    ValidationDelegate delegate = getValidationDelegateRegistry(context).getValidationDelegate(validationDelegate);
+    if (delegate != null)
+    {
+      try
+      {
+        if (!delegate.validate(eDataType, value, context, constraint, expression))
+        {
+          if (diagnostics != null)
+            reportConstraintDelegateViolation(eDataType, value, diagnostics, context, constraint, severity, source, code);
+          return false;
+        }
+      }
+      catch (Throwable throwable)
+      {
+        if (diagnostics != null)
+          reportConstraintDelegateException(eDataType, value, diagnostics, context, constraint, severity, source, code, throwable);
+      }
+    }
+    else
+    {
+      if (diagnostics != null)
+        reportConstraintDelegateNotFound(eDataType, value, diagnostics, context, constraint, severity, source, code, validationDelegate);
+    }
+    return true;
+  }
+
+  /**
    * Validates the object in the given context, optionally producing diagnostics.
    * @param diagnostics a place to accumulate diagnostics; if it's <code>null</code>, no diagnostics should be produced.
    * @param context a place to cache information, if it's <code>null</code>, no cache is supported.
@@ -178,17 +297,46 @@ public class EObjectValidator implements EValidator
 
   public boolean validate(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context)
   {
-    if (eClass.eContainer() == getEPackage())
+	if (eObject.eIsProxy())
+    {
+      if (context != null && context.get(ROOT_OBJECT) != null)
+      {
+        if (diagnostics != null)
+        {
+          diagnostics.add
+            (createDiagnostic
+              (Diagnostic.ERROR,
+               DIAGNOSTIC_SOURCE,
+               EOBJECT__EVERY_PROXY_RESOLVES,
+               "_UI_UnresolvedProxy_diagnostic",
+               new Object []
+               {
+                 getFeatureLabel(eObject.eContainmentFeature(), context),
+                 getObjectLabel(eObject.eContainer(), context),
+                 getObjectLabel(eObject, context)
+               },
+               new Object [] { eObject.eContainer(), eObject.eContainmentFeature(), eObject },
+               context));
+        }
+        return false;
+      }
+      else
+      {
+        return true;
+      }
+    }
+	else if (eClass.eContainer() == getEPackage())
     {
       return validate(eClass.getClassifierID(), eObject, diagnostics, context);
     }
     else
     {
-      List<EClass> eSuperTypes = eClass.getESuperTypes();
       return
-        eSuperTypes.isEmpty() ?
-          validate_EveryDefaultConstraint(eObject, diagnostics, context) :
-          validate(eSuperTypes.get(0), eObject, diagnostics, context);
+        new DynamicEClassValidator()
+        {
+          // Ensure that the class loader for this class will be used downstream.
+          //
+        }.validate(eClass, eObject, diagnostics, context);
     }
   }
 
@@ -211,6 +359,10 @@ public class EObjectValidator implements EValidator
     if (result || theDiagnostics != null)
     {
       result &= validate_EveryReferenceIsContained(object, theDiagnostics, context);
+    }
+    if (result || theDiagnostics != null)
+    {
+      result &= validate_EveryBidirectionalReferenceIsPaired(object, theDiagnostics, context);
     }
     if (result || theDiagnostics != null)
     {
@@ -263,6 +415,167 @@ public class EObjectValidator implements EValidator
     return true;
   }
 
+  public boolean validate_EveryBidirectionalReferenceIsPaired(EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context)
+  {
+    boolean result = true;
+    for (EReference eReference : eObject.eClass().getEAllReferences())
+    {
+      if (eReference.isResolveProxies())
+      {
+        EReference eOpposite = eReference.getEOpposite();
+        if (eOpposite != null)
+        {
+          result &= validate_BidirectionalReferenceIsPaired(eObject, eReference, eOpposite, diagnostics, context);
+          if (!result && diagnostics == null)
+          {
+            return false;
+          }
+        }
+      }
+    }
+    return result;
+  }
+
+  public boolean validate_BidirectionalReferenceIsPaired(EObject eObject, EReference eReference, EReference eOpposite, DiagnosticChain diagnostics, Map<Object, Object> context)
+  {
+    boolean result = true;
+    Object value = eObject.eGet(eReference);
+    if (eReference.isMany())
+    {
+      @SuppressWarnings("unchecked")
+      List<EObject> values = (List<EObject>)value;
+      if (eOpposite.isMany())
+      {
+        for (EObject oppositeEObject : values)
+        {
+          @SuppressWarnings("unchecked")
+          List<EObject> oppositeValues = (List<EObject>)oppositeEObject.eGet(eOpposite);
+          if (!oppositeValues.contains(eObject))
+          {
+            result = false;
+            if (diagnostics != null)
+            {
+              // TODO
+              diagnostics.add
+                (createDiagnostic
+                  (Diagnostic.ERROR,
+                   DIAGNOSTIC_SOURCE,
+                   EOBJECT__EVERY_BIDIRECTIONAL_REFERENCE_IS_PAIRED,
+                   "_UI_UnpairedBidirectionalReference_diagnostic",
+                    new Object []
+                    {
+                      getFeatureLabel(eReference, context),
+                      getObjectLabel(eObject, context),
+                      getFeatureLabel(eOpposite, context),
+                      getObjectLabel(oppositeEObject, context),
+                    },
+                   new Object [] { eObject, eReference, oppositeEObject, eOpposite },
+                   context));
+            }
+            else
+            {
+              break;
+            }
+          }
+        }
+      }
+      else
+      {
+        for (EObject oppositeEObject : values)
+        {
+          if (oppositeEObject.eGet(eOpposite) != eObject)
+          {
+            result = false; 
+            if (diagnostics != null)
+            {
+              // TODO
+              diagnostics.add
+                (createDiagnostic
+                  (Diagnostic.ERROR,
+                   DIAGNOSTIC_SOURCE,
+                   EOBJECT__EVERY_BIDIRECTIONAL_REFERENCE_IS_PAIRED,
+                   "_UI_UnpairedBidirectionalReference_diagnostic",
+                    new Object []
+                    {
+                      getFeatureLabel(eReference, context),
+                      getObjectLabel(eObject, context),
+                      getFeatureLabel(eOpposite, context),
+                      getObjectLabel(oppositeEObject, context),
+                    },
+                   new Object [] { eObject, eReference, oppositeEObject, eOpposite },
+                   context));
+            }
+            else
+            {
+              break;
+            }
+          }
+        }
+      }
+    }
+    else
+    {
+      EObject oppositeEObject = (EObject)value;
+      if (oppositeEObject != null)
+      {
+        if (eOpposite.isMany())
+        {
+          @SuppressWarnings("unchecked")
+          List<EObject> oppositeValues = (List<EObject>)oppositeEObject.eGet(eOpposite);
+          if (!oppositeValues.contains(eObject))
+          {
+            result = false;
+            if (diagnostics != null)
+            {
+              // TODO
+              diagnostics.add
+                (createDiagnostic
+                  (Diagnostic.ERROR,
+                   DIAGNOSTIC_SOURCE,
+                   EOBJECT__EVERY_BIDIRECTIONAL_REFERENCE_IS_PAIRED,
+                   "_UI_UnpairedBidirectionalReference_diagnostic",
+                    new Object []
+                    {
+                      getFeatureLabel(eReference, context),
+                      getObjectLabel(eObject, context),
+                      getFeatureLabel(eOpposite, context),
+                      getObjectLabel(oppositeEObject, context),
+                    },
+                   new Object [] { eObject, eReference, oppositeEObject, eOpposite },
+                   context));
+            }
+          }
+        }
+        else
+        {
+          if (oppositeEObject.eGet(eOpposite) != eObject)
+          {
+            result = false;
+            if (diagnostics != null)
+            {
+              diagnostics.add
+                (createDiagnostic
+                  (Diagnostic.ERROR,
+                   DIAGNOSTIC_SOURCE,
+                   EOBJECT__EVERY_BIDIRECTIONAL_REFERENCE_IS_PAIRED,
+                   "_UI_UnpairedBidirectionalReference_diagnostic",
+                    new Object []
+                    {
+                      getFeatureLabel(eReference, context),
+                      getObjectLabel(eObject, context),
+                      getFeatureLabel(eOpposite, context),
+                      getObjectLabel(oppositeEObject, context),
+                    },
+                   new Object [] { eObject, eReference, oppositeEObject, eOpposite },
+                   context));
+            }
+          }
+        }
+      }
+    }
+    return result;
+  }
+
   public boolean validate_EveryMultiplicityConforms(EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context)
   {
     boolean result = true;
@@ -290,8 +603,14 @@ public class EObjectValidator implements EValidator
         int count = 0;
         for (int i = 0, size = featureMap.size(); i < size; ++i)
         {
-          int kind = ExtendedMetaData.INSTANCE.getFeatureKind(featureMap.getEStructuralFeature(i));
-          if (kind == ExtendedMetaData.ELEMENT_FEATURE && ++count > 1)
+          EStructuralFeature feature = featureMap.getEStructuralFeature(i);
+          int kind = ExtendedMetaData.INSTANCE.getFeatureKind(feature);
+          if (kind == ExtendedMetaData.ELEMENT_FEATURE && 
+                feature != XMLTypePackage.Literals.XML_TYPE_DOCUMENT_ROOT__CDATA &&
+                feature != XMLTypePackage.Literals.XML_TYPE_DOCUMENT_ROOT__COMMENT &&
+                feature != XMLTypePackage.Literals.XML_TYPE_DOCUMENT_ROOT__TEXT &&
+                feature != XMLTypePackage.Literals.XML_TYPE_DOCUMENT_ROOT__PROCESSING_INSTRUCTION &&
+                ++count > 1)
           {
             result = false;
             break;
@@ -651,6 +970,7 @@ public class EObjectValidator implements EValidator
     protected Object effectiveMax;
     protected boolean effectiveMaxIsInclusive;
     protected int effectiveTotalDigitsMax = -1;
+    protected EDataType builtinType;
     protected EDataType itemType;
     protected List<EDataType> memberTypes;
 
@@ -765,7 +1085,17 @@ public class EObjectValidator implements EValidator
         if (baseType != null)
         {
           eDataType = baseType;
-          continue;
+          if (eDataType.getEPackage() == XMLTypePackage.eINSTANCE && eDataType.getInstanceClassName() == "javax.xml.datatype.XMLGregorianCalendar")
+          {
+            builtinType = eDataType;
+            itemType = null;
+            memberTypes = Collections.emptyList();
+            break;
+          }
+          else
+          {
+            continue;
+          }
         }
         else
         {
@@ -836,14 +1166,41 @@ public class EObjectValidator implements EValidator
       }
     }
 
-    public boolean validate(EDataType eDataType, Object value, DiagnosticChain diagnostics, Map<Object, Object> context)
+    protected boolean validateDelegatedConstraints(EDataType eDataType, Object value, DiagnosticChain diagnostics, Map<Object, Object> context)
     {
       boolean result = true;
+      List<String> validationDelegates = EcoreUtil.getValidationDelegates(eDataType.getEPackage());
+
+      if (!validationDelegates.isEmpty())
+      {
+        CONSTRAINTS: for (String constraint : EcoreUtil.getConstraints(eDataType))
+        {
+          for (String validationDelegate : validationDelegates)
+          {
+            String expression = EcoreUtil.getAnnotation(eDataType, validationDelegate, constraint);
+            if (expression != null)
+            {
+              result &= EObjectValidator.this.validate(eDataType, value, diagnostics, context, validationDelegate, constraint, expression, Diagnostic.ERROR, DIAGNOSTIC_SOURCE, 0);
+              if (!result && diagnostics == null)
+                break CONSTRAINTS;
+            }
+          }
+        }
+      }
+
+      return result;
+    }
+
+    protected boolean validateSchemaConstraints(EDataType eDataType, Object value, DiagnosticChain diagnostics, Map<Object, Object> context)
+    {
+      boolean result = true;
+
       if (effectiveEnumeration != null)
       {
         if (!effectiveEnumeration.contains(value))
         {
-          if (diagnostics != null) reportEnumerationViolation(eDataType, value, effectiveEnumeration, diagnostics, context);
+          if (diagnostics != null)
+            reportEnumerationViolation(eDataType, value, effectiveEnumeration, diagnostics, context);
           result = false;
         }
       }
@@ -855,10 +1212,9 @@ public class EObjectValidator implements EValidator
 
       if (effectiveMin != null)
       {
-        @SuppressWarnings("unchecked") Comparable<Object> comparableObject = (Comparable<Object>)effectiveMin;
-        if (effectiveMinIsInclusive ?
-              comparableObject.compareTo(value) > 0:
-              comparableObject.compareTo(value) >= 0)
+        @SuppressWarnings("unchecked")
+        Comparable<Object> comparableObject = (Comparable<Object>)effectiveMin;
+        if (effectiveMinIsInclusive ? comparableObject.compareTo(value) > 0 : comparableObject.compareTo(value) >= 0)
         {
           if (diagnostics != null)
           {
@@ -877,10 +1233,9 @@ public class EObjectValidator implements EValidator
 
       if (effectiveMax != null)
       {
-        @SuppressWarnings("unchecked") Comparable<Object> comparableObject = (Comparable<Object>)effectiveMax;
-        if (effectiveMaxIsInclusive ?
-              comparableObject.compareTo(value) < 0:
-              comparableObject.compareTo(value) <= 0)
+        @SuppressWarnings("unchecked")
+        Comparable<Object> comparableObject = (Comparable<Object>)effectiveMax;
+        if (effectiveMaxIsInclusive ? comparableObject.compareTo(value) < 0 : comparableObject.compareTo(value) <= 0)
         {
           if (diagnostics != null)
           {
@@ -944,40 +1299,138 @@ public class EObjectValidator implements EValidator
           result = false;
         }
       }
+      
+      if (builtinType != null)
+      {
+        EValidator rootValidator = getRootEValidator(context);
+        result &= rootValidator.validate(builtinType, value, diagnostics, context);
+      }
 
-      if (itemType != null)
+      return result;
+    }
+
+    public boolean validate(EDataType eDataType, Object value, DiagnosticChain diagnostics, Map<Object, Object> context)
+    {
+      boolean result = validateDelegatedConstraints(eDataType, value, diagnostics, context);
+
+      if (result || diagnostics != null)
       {
-        EValidator rootValidator = getRootEValidator(context);
-        for (Iterator<?> i = ((List<?>)value).iterator(); i.hasNext() && (result || diagnostics != null); )
+        result &= validateSchemaConstraints(eDataType, value, diagnostics, context);
+
+        if (itemType != null)
         {
-          result &= rootValidator.validate(itemType, i.next(), diagnostics, context);
+          EValidator rootValidator = getRootEValidator(context);
+          for (Iterator< ? > i = ((List< ? >)value).iterator(); i.hasNext() && (result || diagnostics != null);)
+          {
+            result &= rootValidator.validate(itemType, i.next(), diagnostics, context);
+          }
+          return result;
         }
-        return result;
+        else if (!memberTypes.isEmpty())
+        {
+          EValidator rootValidator = getRootEValidator(context);
+
+          for (EDataType memberType : memberTypes)
+          {
+            if (rootValidator.validate(memberType, value, null, context))
+            {
+              return true;
+            }
+          }
+          for (EDataType memberType : memberTypes)
+          {
+            if (memberType.isInstance(value))
+            {
+              return rootValidator.validate(memberType, value, diagnostics, context);
+            }
+          }
+          return false;
+        }
+        else
+        {
+          return result;
+        }
       }
-      else if (!memberTypes.isEmpty())
+
+      return result;
+    }
+  }
+
+  public class DynamicEClassValidator
+  {
+    protected boolean validateDelegatedInvariants(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context)
+    {
+      boolean result = true;
+      List<String> validationDelegates = EcoreUtil.getValidationDelegates(eClass.getEPackage());
+
+      if (!validationDelegates.isEmpty())
       {
-        EValidator rootValidator = getRootEValidator(context);
+        INVARIANTS: for (EOperation eOperation : eClass.getEOperations())
+        {
+          if (EcoreUtil.isInvariant(eOperation))
+          {
+            for (String validationDelegate : validationDelegates)
+            {
+              String expression = EcoreUtil.getAnnotation(eOperation, validationDelegate, "body");
+              if (expression != null)
+              {
+                result &= EObjectValidator.validate(eClass, eObject, diagnostics, context, validationDelegate, eOperation, expression, Diagnostic.ERROR, DIAGNOSTIC_SOURCE, 0);
+                if (!result && diagnostics == null)
+                  break INVARIANTS;
+              }
+            }
+          }
+        }
+      }
+
+      return result;
+    }
+    
+    protected boolean validateDelegatedConstraints(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context)
+    {
+      boolean result = true;
+      List<String> validationDelegates = EcoreUtil.getValidationDelegates(eClass.getEPackage());
+
+      if (!validationDelegates.isEmpty())
+      {
+        CONSTRAINTS: for (String constraint : EcoreUtil.getConstraints(eClass))
+        {
+          for (String validationDelegate : validationDelegates)
+          {
+            String expression = EcoreUtil.getAnnotation(eClass, validationDelegate, constraint);
+            if (expression != null)
+            {
+              result &= EObjectValidator.this.validate(eClass, eObject, diagnostics, context, validationDelegate, constraint, expression, Diagnostic.ERROR, DIAGNOSTIC_SOURCE, 0);
+              if (!result && diagnostics == null)
+                break CONSTRAINTS;
+            }
+          }
+        }
+      }
+
+      return result;
+    }
+    
+    public boolean validate(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context)
+    {
+      boolean result = validateDelegatedInvariants(eClass, eObject, diagnostics, context);
+
+      if (result || diagnostics != null)
+      {
+        result &= validateDelegatedConstraints(eClass, eObject, diagnostics, context);
         
-        for (EDataType memberType : memberTypes)
+        if (result || diagnostics != null)
         {
-          if (rootValidator.validate(memberType, value, null, context))
-          {
-            return true;
-          }
+          List<EClass> eSuperTypes = eClass.getESuperTypes();
+          result &= eSuperTypes.isEmpty() ?
+            validate_EveryDefaultConstraint(eObject, diagnostics, context) :
+              eClass.eContainer() == getEPackage() ?
+                EObjectValidator.this.validate(eClass.getClassifierID(), eObject, diagnostics, context) :
+                validate(eSuperTypes.get(0), eObject, diagnostics, context);
         }
-        for (EDataType memberType : memberTypes)
-        {
-          if (memberType.isInstance(value))
-          {
-            return rootValidator.validate(memberType, value, diagnostics, context);
-          }
-        }
-        return false;
       }
-      else
-      {
-        return result;
-      }
+
+      return result;
     }
   }
 
@@ -1200,6 +1653,132 @@ public class EObjectValidator implements EValidator
          },
          new Object [] { value, eDataType },
          context));
+  }
+
+  /**
+   * @since 2.6
+   */
+  protected void reportConstraintDelegateViolation(EDataType eDataType, Object value, DiagnosticChain diagnostics, Map<Object, Object> context, String constraint, int severity, String source, int code)
+  {
+    diagnostics.add
+      (new BasicDiagnostic
+        (severity,
+         source,
+         code,
+         getString("_UI_GenericConstraint_diagnostic", new Object[] { constraint, getValueLabel(eDataType, value, context) }),
+         new Object [] { value }));
+  }
+
+  /**
+   * @since 2.6
+   */
+  protected void reportConstraintDelegateException(EDataType eDataType, Object value, DiagnosticChain diagnostics, Map<Object, Object> context, String constraint, int severity, String source, int code, Throwable throwable)
+  {
+    diagnostics.add
+      (new BasicDiagnostic
+        (severity,
+         source,
+         code,
+         getString("_UI_ConstraintDelegateException_diagnostic", new Object[] { constraint, getValueLabel(eDataType, value, context), throwable.getLocalizedMessage() }),
+         new Object [] { value }));
+  }
+
+  /**
+   * @since 2.6
+   */
+  protected void reportConstraintDelegateNotFound(EDataType eDataType, Object value, DiagnosticChain diagnostics, Map<Object, Object> context, String constraint, int severity, String source, int code, String validationDelegate)
+  {
+    diagnostics.add
+      (new BasicDiagnostic
+        (severity,
+         source,
+         code,
+         getString("_UI_ConstraintDelegateNotFound_diagnostic", new Object[] { constraint, getValueLabel(eDataType, value, context), validationDelegate }),
+         new Object [] { value }));
+  }
+
+  /**
+   * @since 2.6
+   */
+  protected void reportConstraintDelegateViolation(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context, String constraint, int severity, String source, int code)
+  {
+    diagnostics.add
+      (new BasicDiagnostic
+        (severity,
+         source,
+         code,
+         getString("_UI_GenericConstraint_diagnostic", new Object[] { constraint, getObjectLabel(eObject, context) }),
+         new Object [] { eObject }));
+  }
+
+  /**
+   * @since 2.6
+   */
+  protected void reportConstraintDelegateException(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context, String constraint, int severity, String source, int code, Throwable throwable)
+  {
+    diagnostics.add
+      (new BasicDiagnostic
+        (severity,
+         source,
+         code,
+         getString("_UI_ConstraintDelegateException_diagnostic", new Object[] { constraint, getObjectLabel(eObject, context), throwable.getLocalizedMessage() }),
+         new Object [] { eObject }));
+  }
+
+  /**
+   * @since 2.6
+   */
+  protected void reportConstraintDelegateNotFound(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context, String constraint, int severity, String source, int code, String validationDelegate)
+  {
+    diagnostics.add
+      (new BasicDiagnostic
+        (severity,
+         source,
+         code,
+         getString("_UI_ConstraintDelegateNotFound_diagnostic", new Object[] { constraint, getObjectLabel(eObject, context), validationDelegate }),
+         new Object [] { eObject }));
+  }
+
+  /**
+   * @since 2.6
+   */
+  protected static void reportInvariantDelegateViolation(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context, EOperation invariant, int severity, String source, int code)
+  {
+    diagnostics.add
+      (new BasicDiagnostic
+        (severity,
+         source,
+         code,
+         EcorePlugin.INSTANCE.getString("_UI_GenericInvariant_diagnostic", new Object[] { invariant.getName(), getObjectLabel(eObject, context) }),
+         new Object [] { eObject }));
+  }
+
+  /**
+   * @since 2.6
+   */
+  protected static void reportInvariantDelegateException(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context, EOperation invariant, int severity, String source, int code, Throwable throwable)
+  {
+    diagnostics.add
+      (new BasicDiagnostic
+        (severity,
+         source,
+         code,
+         EcorePlugin.INSTANCE.getString("_UI_InvariantDelegateException_diagnostic", new Object[] { invariant.getName(), getObjectLabel(eObject, context), throwable.getLocalizedMessage() }),
+         new Object [] { eObject }));
+  }
+
+  /**
+   * @since 2.6
+   */
+  protected static void reportInvariantDelegateNotFound(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context, EOperation invariant, int severity, String source, int code, String validationDelegate)
+  {
+    diagnostics.add
+    (new BasicDiagnostic
+      (severity,
+       source,
+       code,
+       EcorePlugin.INSTANCE.getString("_UI_InvariantDelegateNotFound_diagnostic", new Object[] { invariant.getName(), getObjectLabel(eObject, context), validationDelegate }),
+       new Object [] { eObject }));
   }
 
   protected static Collection<Object> wrapEnumerationValues(Object [] values)
@@ -1471,6 +2050,16 @@ public class EObjectValidator implements EValidator
   }
 
   /**
+   * @since 2.6
+   */
+  protected boolean isEcoreString(String key)
+  {
+    return "_UI_GenericConstraint_diagnostic".equals(key) || "_UI_GenericInvariant_diagnostic".equals(key)
+      || "_UI_ConstraintDelegateException_diagnostic".equals(key) || "_UI_InvariantDelegateException_diagnostic".equals(key)
+      || "_UI_ConstraintDelegateNotFound_diagnostic".equals(key) || "_UI_InvariantDelegateNotFound_diagnostic".equals(key);
+  }
+
+  /**
    * Returns a translated message with the given substitutions.
    * The {@link #getResourceLocator() resource locator} is used.
    * @param key the key for the message.
@@ -1480,7 +2069,7 @@ public class EObjectValidator implements EValidator
    */
   protected String getString(String key, Object [] substitutions)
   {
-    return getString("_UI_GenericConstraint_diagnostic".equals(key) ? getEcoreResourceLocator() : getResourceLocator(), key, substitutions);
+    return getString(isEcoreString(key) ? getEcoreResourceLocator() : getResourceLocator(), key, substitutions);
   }
 
   /**

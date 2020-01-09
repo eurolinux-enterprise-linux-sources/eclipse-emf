@@ -1,7 +1,7 @@
 /**
  * <copyright> 
  *
- * Copyright (c) 2002-2006 IBM Corporation and others.
+ * Copyright (c) 2002-2010 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: GenOperationImpl.java,v 1.36 2009/04/18 11:38:01 emerks Exp $
+ * $Id: GenOperationImpl.java,v 1.41 2010/06/04 14:14:15 khussey Exp $
  */
 package org.eclipse.emf.codegen.ecore.genmodel.impl;
 
@@ -29,6 +29,7 @@ import org.eclipse.emf.codegen.ecore.genmodel.GenModelPackage;
 import org.eclipse.emf.codegen.ecore.genmodel.GenOperation;
 import org.eclipse.emf.codegen.ecore.genmodel.GenPackage;
 import org.eclipse.emf.codegen.ecore.genmodel.GenParameter;
+import org.eclipse.emf.codegen.ecore.genmodel.GenRuntimeVersion;
 import org.eclipse.emf.codegen.ecore.genmodel.GenTypeParameter;
 import org.eclipse.emf.common.notify.Notification;
 import org.eclipse.emf.common.notify.NotificationChain;
@@ -400,7 +401,7 @@ public class GenOperationImpl extends GenTypedElementImpl implements GenOperatio
   @Override
   public String getName()
   {
-    return getEcoreOperation().getName();
+    return safeName(getEcoreOperation().getName());
   }
 
   public String getCapName()
@@ -603,7 +604,7 @@ public class GenOperationImpl extends GenTypedElementImpl implements GenOperatio
     {
       GenParameter genParameter = genParameterIterator.next();
       String type = genParameter.getRawType();
-
+      
       if (!qualified)
       {
         int firstBracket = type.indexOf("[");
@@ -618,7 +619,7 @@ public class GenOperationImpl extends GenTypedElementImpl implements GenOperatio
         if (firstDollar != -1)
         {
           type = type.substring(0, firstDollar);
-        }
+        }          
       }
 
       parameterTypes.append(type);
@@ -630,6 +631,55 @@ public class GenOperationImpl extends GenTypedElementImpl implements GenOperatio
     }
 
     return parameterTypes.toString();
+  }
+
+  public String getParametersArray(GenClass context)
+  {
+    boolean isJSK50 = getGenModel().getComplianceLevel().getValue() >= GenJDKLevel.JDK50;
+    StringBuffer parametersArray = new StringBuffer("new Object[]{");
+    for (Iterator<GenParameter> genParameterIterator = getGenParameters().iterator(); genParameterIterator.hasNext();)
+    {
+      GenParameter genParameter = genParameterIterator.next();
+      if (!isJSK50 && genParameter.isPrimitiveType())
+      {
+        parametersArray.append("new " + genParameter.getObjectType(context) + "(");
+      }
+      parametersArray.append(genParameter.getName());
+      if (!isJSK50 && genParameter.isPrimitiveType())
+      {
+        parametersArray.append(")");
+      }
+      if (genParameterIterator.hasNext())
+      {
+        parametersArray.append(", ");
+      }
+    }
+    parametersArray.append("}");
+
+    return parametersArray.toString();
+  }
+
+  public String getOperationAccessorName()
+  {
+    return getGenClass().getName() + "__" + getGenClass().getUniqueName(this);
+  }
+
+  public String getQualifiedOperationAccessorName()
+  {
+    return getGenPackage().getImportedPackageInterfaceName() + ".eINSTANCE.get" + getOperationAccessorName();
+  }
+
+  public String getQualifiedOperationAccessor()
+  {
+    if (getGenModel().isOperationReflection())
+    {
+      return getGenPackage().isLiteralsInterface() ? getGenPackage().getImportedPackageInterfaceName() + ".Literals."
+        + getGenClass().getOperationID(this, false) : getQualifiedOperationAccessorName() + "()";
+    }
+    else
+    {
+      return getGenClass().getQualifiedClassifierAccessor() + ".getEOperations().get(" + getGenClass().getLocalOperationIndex(this) + ")";
+    }
   }
 
   public String getImportedMetaType()
@@ -927,6 +977,42 @@ public class GenOperationImpl extends GenTypedElementImpl implements GenOperatio
     }
   }
 
+  protected String getInvariantExpression()
+  {
+    for (String validationDelegate : EcoreUtil.getValidationDelegates(getGenPackage().getEcorePackage()))
+    {
+      String expression = EcoreUtil.getAnnotation(getEcoreOperation(), validationDelegate, "body");
+      if (expression != null)
+      {
+        return expression;
+      }
+    }
+    return null;
+  }
+
+  public boolean hasInvariantExpression()
+  {
+    return getGenModel().getRuntimeVersion().getValue() >= GenRuntimeVersion.EMF26_VALUE && getInvariantExpression() != null;
+  }
+
+  public String getInvariantExpression(String indentation)
+  {
+    return indent(getInvariantExpression(), indentation + "\"", "\" +" + getGenModel().getNonNLS() + getGenModel().getLineDelimiter(), true);
+  }
+
+  public String getValidationDelegate()
+  {
+    for (String validationDelegate : EcoreUtil.getValidationDelegates(getGenPackage().getEcorePackage()))
+    {
+      String expression = EcoreUtil.getAnnotation(getEcoreOperation(), validationDelegate, "body");
+      if (expression != null)
+      {
+        return validationDelegate;
+      }
+    }
+    return null;
+  }
+
   public List<GenClassifier> getGenExceptions()
   {
     List<GenClassifier> result = new ArrayList<GenClassifier>();
@@ -1020,7 +1106,7 @@ public class GenOperationImpl extends GenTypedElementImpl implements GenOperatio
     }
     return false;
   }
-  
+
   public String getTypeParameters(GenClass context)
   {
     if (!getGenTypeParameters().isEmpty() && getEffectiveComplianceLevel().getValue() >= GenJDKLevel.JDK50)
@@ -1089,5 +1175,18 @@ public class GenOperationImpl extends GenTypedElementImpl implements GenOperatio
   public boolean isSuppressedVisibility()
   {
     return EcoreUtil.isSuppressedVisibility(getEcoreOperation());
+  }
+
+  public boolean hasInvocationDelegate()
+  {
+    if (getGenModel().getRuntimeVersion().getValue() < GenRuntimeVersion.EMF26_VALUE)
+      return false;
+    EOperation ecoreOperation = getEcoreOperation();
+    for (String invocationDelegate : EcoreUtil.getInvocationDelegates(getGenPackage().getEcorePackage()))
+    {
+      if (ecoreOperation.getEAnnotation(invocationDelegate) != null)
+        return true;
+    }
+    return false;
   }
 }

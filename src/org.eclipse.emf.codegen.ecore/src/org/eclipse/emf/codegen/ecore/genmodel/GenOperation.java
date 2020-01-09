@@ -1,7 +1,7 @@
 /**
  * <copyright> 
  *
- * Copyright (c) 2002-2006 IBM Corporation and others.
+ * Copyright (c) 2002-2009 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: GenOperation.java,v 1.18 2008/05/04 17:03:27 emerks Exp $
+ * $Id: GenOperation.java,v 1.20 2009/11/16 19:26:45 khussey Exp $
  */
 package org.eclipse.emf.codegen.ecore.genmodel;
 
@@ -123,6 +123,21 @@ public interface GenOperation extends GenTypedElement
   String getCapName();
   String getFormattedName();
 
+  /**
+   * @since 2.6
+   */
+  String getOperationAccessorName(); // returns the name of the operation get method in the package interface
+
+  /**
+   * @since 2.6
+   */
+  String getQualifiedOperationAccessorName(); // returns the name of the operation get method in the package interface
+
+  /**
+   * @since 2.6
+   */
+  String getQualifiedOperationAccessor();
+
   boolean isVoid();
 
   /**
@@ -180,6 +195,11 @@ public interface GenOperation extends GenTypedElement
   String getParameterTypes(String separator, boolean qualified);
   String getParameterNames(String separator);
 
+  /**
+   * @since 2.6
+   */
+  String getParametersArray(GenClass context);
+
   String getImportedMetaType();
 
   GenPackage getGenPackage();
@@ -190,6 +210,21 @@ public interface GenOperation extends GenTypedElement
   boolean reconcile(GenOperation oldGenOperationVersion);
   boolean hasBody();
   String getBody(String indentation);
+
+  /**
+   * @since 2.6
+   */
+  boolean hasInvariantExpression();
+
+  /**
+   * @since 2.6
+   */
+  String getInvariantExpression(String indentation);
+
+  /**
+   * @since 2.6
+   */
+  String getValidationDelegate();
 
   List<GenClassifier> getGenExceptions();
 
@@ -244,4 +279,10 @@ public interface GenOperation extends GenTypedElement
    * @since 2.4
    */
   boolean isSuppressedVisibility();
+
+  /**
+   * Returns whether this operation is implemented with a registered invocation delegate.
+   * @since 2.6
+   */
+  boolean hasInvocationDelegate();
 }

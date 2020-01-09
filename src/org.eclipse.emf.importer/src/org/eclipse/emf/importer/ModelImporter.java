@@ -12,7 +12,7 @@
  *
  * </copyright>
  *
- * $Id: ModelImporter.java,v 1.40 2009/04/21 19:24:32 davidms Exp $
+ * $Id: ModelImporter.java,v 1.42 2010/02/04 20:56:27 emerks Exp $
  */
 package org.eclipse.emf.importer;
 
@@ -564,7 +564,7 @@ public abstract class ModelImporter extends ModelConverter
         @Override
         protected Iterator<EPackage> getChildren(Object object)
         {
-          return object instanceof Collection ? 
+          return object instanceof Collection<?> ? 
             ((Collection<EPackage>)object).iterator() :
             ((EPackage)object).getESubpackages().iterator();  
         }
@@ -830,13 +830,24 @@ public abstract class ModelImporter extends ModelConverter
 
     // Create the model project.
     //
+    
+    int style = Generator.EMF_MODEL_PROJECT_STYLE;
+    if (getGenModel().hasPluginSupport())
+    {
+      style |= Generator.EMF_PLUGIN_PROJECT_STYLE;
+    }
+    if (getGenModel().hasXMLDependency())
+    {
+      style |= Generator.EMF_XML_PROJECT_STYLE;
+    }
+    
     List<IProject> referencedProjects = new ArrayList<IProject>(referencedModelProjects);
     Generator.createEMFProject
       (new Path(path),
        getGenModelProjectLocation(),
        referencedProjects,
        monitor,
-       Generator.EMF_MODEL_PROJECT_STYLE | Generator.EMF_EMPTY_PROJECT_STYLE);
+       style);
   }
 
   protected void adjustGenModel(Monitor monitor)

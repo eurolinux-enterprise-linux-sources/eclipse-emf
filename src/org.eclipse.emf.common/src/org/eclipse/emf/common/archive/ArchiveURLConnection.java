@@ -241,6 +241,14 @@ public class ArchiveURLConnection extends URLConnection
       InputStream zipEntryInputStream = inputZipEntry == null ? null : zipFile.getInputStream(inputZipEntry);
       if (zipEntryInputStream == null)
       {
+        try
+        {
+          zipFile.close();
+        }
+        catch (Throwable throwable)
+        {
+          // Ignore because we'll throw a different IO exception
+        }
         throw new IOException("Archive entry not found " + urlString);
       }
       inputStream = 
@@ -344,6 +352,7 @@ public class ArchiveURLConnection extends URLConnection
     // before the new contents are added.
     //
     final File tempFile = File.createTempFile("Archive", "zip");
+    tempFile.deleteOnExit();
     
     // Record the input and output streams for closing in case of failure so that handles are not left open.
     //
@@ -554,6 +563,9 @@ public class ArchiveURLConnection extends URLConnection
                   }
                 }
               }
+              // Delete the temporary file early if possible
+              //
+              tempFile.delete();
             }
           }
         };
